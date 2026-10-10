@@ -2,11 +2,10 @@ import { MetadataRoute } from 'next'
 import { allBlogs } from 'contentlayer/generated'
 import siteMetadata from '@/data/siteMetadata'
 import { getLatestButtondownPosts, getNewsletterTotalPages } from '@/lib/buttondown'
-import { isBlogListPost } from '@/lib/blog'
+import { isBlogListPost, isColumnPost } from '@/lib/blog'
+import { getArchivePage } from '@/lib/pagination'
 
 export const dynamic = 'force-static'
-
-const POSTS_PER_PAGE = 5
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = siteMetadata.siteUrl
@@ -32,7 +31,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date().toISOString().split('T')[0],
   }))
 
-  const totalBlogPages = Math.ceil(publishedPosts.filter(isBlogListPost).length / POSTS_PER_PAGE)
+  const blogPosts = publishedPosts.filter((post) => !isColumnPost(post))
+  const regularBlogPosts = blogPosts.filter(isBlogListPost)
+  const { totalPages: totalBlogPages } = getArchivePage(
+    regularBlogPosts.length,
+    1,
+    blogPosts.length - regularBlogPosts.length
+  )
   const blogPaginationRoutes =
     totalBlogPages > 1
       ? Array.from({ length: totalBlogPages - 1 }, (_, i) => {

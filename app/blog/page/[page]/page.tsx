@@ -1,18 +1,21 @@
 import ListLayout from '@/layouts/ListLayoutWithTags'
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { genPageMetadata } from 'app/seo'
-import { isBlogListPost } from '@/lib/blog'
+import { isBlogListPost, isColumnPost } from '@/lib/blog'
+import { getArchivePage } from '@/lib/pagination'
 
-const POSTS_PER_PAGE = 5
 function getVisiblePosts() {
-  return allCoreContent(sortPosts(allBlogs)).filter(isBlogListPost)
+  const visiblePosts = allCoreContent(sortPosts(allBlogs.filter((post) => !isColumnPost(post))))
+  const posts = visiblePosts.filter(isBlogListPost)
+  return { posts, featuredCount: visiblePosts.length - posts.length }
 }
 
 export const generateStaticParams = async () => {
-  const totalPages = Math.ceil(getVisiblePosts().length / POSTS_PER_PAGE)
-  const paths = Array.from({ length: totalPages }, (_, i) => ({ page: (i + 1).toString() }))
+  const { posts, featuredCount } = getVisiblePosts()
+  const { totalPages } = getArchivePage(posts.length, 1, featuredCount)
+  const paths = Array.from({ length: totalPages - 1 }, (_, i) => ({ page: (i + 2).toString() }))
 
   return paths
 }
@@ -27,24 +30,26 @@ export async function generateMetadata(props: { params: Promise<{ page: string }
 
   return genPageMetadata({
     title: pageNumber === 1 ? 'Blog' : `Blog - Page ${pageNumber}`,
-    path: `/blog/page/${pageNumber}`,
+    path: pageNumber === 1 ? '/blog' : `/blog/page/${pageNumber}`,
   })
 }
 
 export default async function Page(props: { params: Promise<{ page: string }> }) {
   const params = await props.params
-  const posts = getVisiblePosts()
   const pageNumber = parseInt(params.page as string)
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
+  if (pageNumber === 1) permanentRedirect('/blog')
+  const { posts, featuredCount } = getVisiblePosts()
+  const { totalPages, startIndex, endIndex } = getArchivePage(
+    posts.length,
+    pageNumber,
+    featuredCount
+  )
 
   // Return 404 for invalid page numbers or empty pages
   if (pageNumber <= 0 || pageNumber > totalPages || isNaN(pageNumber)) {
     return notFound()
   }
-  const initialDisplayPosts = posts.slice(
-    POSTS_PER_PAGE * (pageNumber - 1),
-    POSTS_PER_PAGE * pageNumber
-  )
+  const initialDisplayPosts = posts.slice(startIndex, endIndex)
   const pagination = {
     currentPage: pageNumber,
     totalPages: totalPages,

@@ -1,8 +1,10 @@
+import { ARCHIVE_POSTS_PER_PAGE, getArchivePage } from './pagination'
+
 const RSS_FETCH_LIMIT = 100
 const BUTTONDOWN_RSS_URL = `https://buttondown.com/yutaro/rss?count=${RSS_FETCH_LIMIT}`
 const RSS_REVALIDATE_SECONDS = 60 * 60
 const MAX_DESCRIPTION_LENGTH = 220
-export const NEWSLETTER_POSTS_PER_PAGE = 5
+export const NEWSLETTER_POSTS_PER_PAGE = ARCHIVE_POSTS_PER_PAGE
 export const NEWSLETTER_FIXED_ITEMS_ON_FIRST_PAGE = 2
 
 export type ButtondownPost = {
@@ -106,30 +108,14 @@ export async function getLatestButtondownPosts(): Promise<ButtondownPost[]> {
 }
 
 export function getPaginatedButtondownPosts(posts: ButtondownPost[], pageNumber: number) {
-  const firstPageRssCount = Math.max(
-    0,
-    NEWSLETTER_POSTS_PER_PAGE - NEWSLETTER_FIXED_ITEMS_ON_FIRST_PAGE
+  const { startIndex, endIndex } = getArchivePage(
+    posts.length,
+    pageNumber,
+    NEWSLETTER_FIXED_ITEMS_ON_FIRST_PAGE
   )
-
-  if (pageNumber <= 1) {
-    return posts.slice(0, firstPageRssCount)
-  }
-
-  const startIndex = firstPageRssCount + NEWSLETTER_POSTS_PER_PAGE * (pageNumber - 2)
-  const endIndex = startIndex + NEWSLETTER_POSTS_PER_PAGE
-
   return posts.slice(startIndex, endIndex)
 }
 
 export function getNewsletterTotalPages(totalRssPosts: number) {
-  const firstPageRssCount = Math.max(
-    0,
-    NEWSLETTER_POSTS_PER_PAGE - NEWSLETTER_FIXED_ITEMS_ON_FIRST_PAGE
-  )
-
-  if (totalRssPosts <= firstPageRssCount) {
-    return 1
-  }
-
-  return 1 + Math.ceil((totalRssPosts - firstPageRssCount) / NEWSLETTER_POSTS_PER_PAGE)
+  return getArchivePage(totalRssPosts, 1, NEWSLETTER_FIXED_ITEMS_ON_FIRST_PAGE).totalPages
 }

@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { genPageMetadata } from 'app/seo'
 import NewsletterArchive from '@/components/NewsletterArchive'
 import {
@@ -11,7 +11,7 @@ export const generateStaticParams = async () => {
   const posts = await getLatestButtondownPosts()
   const totalPages = getNewsletterTotalPages(posts.length)
 
-  return Array.from({ length: totalPages }, (_, i) => ({ page: (i + 1).toString() }))
+  return Array.from({ length: totalPages - 1 }, (_, i) => ({ page: (i + 2).toString() }))
 }
 
 export async function generateMetadata(props: { params: Promise<{ page: string }> }) {
@@ -24,7 +24,7 @@ export async function generateMetadata(props: { params: Promise<{ page: string }
 
   return genPageMetadata({
     title: pageNumber === 1 ? 'Newsletter' : `Newsletter - Page ${pageNumber}`,
-    path: `/newsletter/page/${pageNumber}`,
+    path: pageNumber === 1 ? '/newsletter' : `/newsletter/page/${pageNumber}`,
   })
 }
 
@@ -33,6 +33,7 @@ export default async function NewsletterPaginationPage(props: {
 }) {
   const params = await props.params
   const pageNumber = parseInt(params.page, 10)
+  if (pageNumber === 1) permanentRedirect('/newsletter')
   const posts = await getLatestButtondownPosts()
   const totalPages = getNewsletterTotalPages(posts.length)
 

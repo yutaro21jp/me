@@ -8,8 +8,7 @@ import { genPageMetadata } from 'app/seo'
 import { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { COLUMN_TAG, getTagDisplayName } from '@/lib/tags'
-
-const POSTS_PER_PAGE = 5
+import { ARCHIVE_POSTS_PER_PAGE as POSTS_PER_PAGE } from '@/lib/pagination'
 
 export async function generateMetadata(props: {
   params: Promise<{ tag: string }>

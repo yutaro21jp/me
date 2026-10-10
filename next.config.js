@@ -88,6 +88,16 @@ module.exports = () => {
     async redirects() {
       return [
         {
+          source: '/blog/page/1',
+          destination: '/blog',
+          permanent: true,
+        },
+        {
+          source: '/newsletter/page/1',
+          destination: '/newsletter',
+          permanent: true,
+        },
+        {
           source: '/blog/column',
           destination: '/column',
           permanent: true,

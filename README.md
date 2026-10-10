@@ -40,6 +40,8 @@ Zap は、WebLN の支払い応答の preimage が請求書と一致した場合
 
 トップページは Column、Blog の順に表示します。Column は公開済みの最新5件を投稿日順に並べ、コラム一覧へリンクします。ヘッダーメニューには Column を表示しません。
 
+Blog（タグ別の一覧を含む）と Newsletter の一覧は1ページ10件です。1ページ目は Project・Book も10件に含め、2ページ目以降は通常記事を10件ずつ表示します。
+
 ## 画像運用
 
 Vercel Hobby プランの Image Optimization 上限を避けるため、サイト内の画像は事前に WebP 化して `public/images/` から静的配信します。

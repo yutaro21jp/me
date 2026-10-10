@@ -5,8 +5,7 @@ import { allBlogs } from 'contentlayer/generated'
 import tagData from 'app/tag-data.json'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { COLUMN_TAG, getTagDisplayName } from '@/lib/tags'
-
-const POSTS_PER_PAGE = 5
+import { ARCHIVE_POSTS_PER_PAGE as POSTS_PER_PAGE } from '@/lib/pagination'
 
 export const generateStaticParams = async () => {
   const tagCounts = tagData as Record<string, number>
