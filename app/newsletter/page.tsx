@@ -14,7 +14,7 @@ const BOOK_ITEM: NewsletterListItem = {
   summary:
     'Dr. Fiat has monopolized the global economy, creating a future society where people are bound by credit scores. Yūki and his allies unravel the history of money and rise up, using Bitcoin to take back their freedom.',
   url: 'https://blogstr.net/read/?naddr=naddr1qvzqqqr4gupzqa052atf6up8lqvaayhghvfhjhq0a05h2rwrlvd4cs4wk5pdppqaqq8ryvpjxccrsv3cxycnxvesxsnfcs46',
-  image: '/images/blog/portfolio/20250131/bitcoin-resistance-1st.webp',
+  image: '/images/blog/20250131/bitcoin-resistance-1st.webp',
 }
 
 export default async function NewsletterPage() {

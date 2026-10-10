@@ -85,6 +85,30 @@ module.exports = () => {
     reactStrictMode: true,
     trailingSlash: false,
     pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+    async redirects() {
+      return [
+        {
+          source: '/blog/column',
+          destination: '/tags/column',
+          permanent: true,
+        },
+        {
+          source: '/images/blog/portfolio/:path*',
+          destination: '/images/blog/:path*',
+          permanent: true,
+        },
+        {
+          source: '/blog/portfolio/:slug*',
+          destination: '/blog/:slug*',
+          permanent: true,
+        },
+        {
+          source: '/portfolio',
+          destination: '/blog',
+          permanent: true,
+        },
+      ]
+    },
     images: {
       formats: ['image/webp'],
       minimumCacheTTL: 2678400,

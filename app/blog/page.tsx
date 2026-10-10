@@ -2,17 +2,17 @@ import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
 import { genPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayoutWithTags'
+import { isBlogListPost, isColumnPost } from '@/lib/blog'
 
 const POSTS_PER_PAGE = 5
-const FEATURED_BLOG_PATH = 'blog/portfolio/bitcoin-resistance-1st'
-const PROJECT_BLOG_PATH = 'blog/portfolio/blogstr'
-const HIDDEN_BLOG_PATHS = new Set([FEATURED_BLOG_PATH, PROJECT_BLOG_PATH])
+const FEATURED_BLOG_PATH = 'blog/bitcoin-resistance-1st'
+const PROJECT_BLOG_PATH = 'blog/blogstr'
 
 export const metadata = genPageMetadata({ title: 'Blog', path: '/blog' })
 
 export default async function BlogPage(props: { searchParams: Promise<{ page: string }> }) {
-  const sortedPosts = allCoreContent(sortPosts(allBlogs))
-  const posts = sortedPosts.filter((post) => !HIDDEN_BLOG_PATHS.has(post.path))
+  const sortedPosts = allCoreContent(sortPosts(allBlogs.filter((post) => !isColumnPost(post))))
+  const posts = sortedPosts.filter(isBlogListPost)
   const featuredPost = sortedPosts.find((post) => post.path === FEATURED_BLOG_PATH)
   const projectPost = sortedPosts.find((post) => post.path === PROJECT_BLOG_PATH)
   const pageNumber = 1

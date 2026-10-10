@@ -3,15 +3,11 @@ import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
 import { notFound } from 'next/navigation'
 import { genPageMetadata } from 'app/seo'
+import { isBlogListPost } from '@/lib/blog'
 
 const POSTS_PER_PAGE = 5
-const HIDDEN_BLOG_PATHS = new Set([
-  'blog/portfolio/bitcoin-resistance-1st',
-  'blog/portfolio/blogstr',
-])
-
 function getVisiblePosts() {
-  return allCoreContent(sortPosts(allBlogs)).filter((post) => !HIDDEN_BLOG_PATHS.has(post.path))
+  return allCoreContent(sortPosts(allBlogs)).filter(isBlogListPost)
 }
 
 export const generateStaticParams = async () => {

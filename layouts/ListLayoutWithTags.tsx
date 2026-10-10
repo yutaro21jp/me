@@ -10,6 +10,8 @@ import Tag from '@/components/Tag'
 import Image from '@/components/Image'
 import siteMetadata from '@/data/siteMetadata'
 import { imageOrFallback } from '@/data/imageDefaults'
+import { getTagDisplayName } from '@/lib/tags'
+import { getPostImages } from '@/lib/blog'
 import tagData from 'app/tag-data.json'
 
 interface PaginationProps {
@@ -21,6 +23,7 @@ interface ListLayoutProps {
   title: string
   initialDisplayPosts?: CoreContent<Blog>[]
   pagination?: PaginationProps
+  listStyle?: 'default' | 'compact'
   featuredPosts?: {
     title: string
     summary?: string
@@ -28,11 +31,6 @@ interface ListLayoutProps {
     href: string
     eyebrow?: string
   }[]
-}
-
-const tagDisplayNameMap = {
-  bitcoin: 'ビットコイン',
-  nostr: 'Nostr',
 }
 
 function Pagination({ totalPages, currentPage }: PaginationProps) {
@@ -80,7 +78,7 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
   )
 }
 
-function CategorySidebarContent({
+function TagSidebarContent({
   pathname,
   sortedTags,
   tagCounts,
@@ -89,44 +87,48 @@ function CategorySidebarContent({
   sortedTags: string[]
   tagCounts: Record<string, number>
 }) {
+  const selectedTag = decodeURIComponent(pathname.match(/^\/tags\/([^/]+)/)?.[1] || '')
+  const isAllPosts = pathname.startsWith('/blog')
+
   return (
-    <>
-      {pathname.startsWith('/blog') ? (
-        <h3 className="text-primary-500 font-bold uppercase">Category</h3>
-      ) : (
+    <nav aria-label="Tags">
+      <h2>
         <Link
-          href={`/blog`}
+          href="/tags"
           className="hover:text-primary-500 dark:hover:text-primary-500 font-bold text-gray-700 uppercase dark:text-gray-300"
         >
-          All posts
+          Tags
         </Link>
-      )}
+      </h2>
       <ul>
+        <li className="my-3">
+          <Link
+            href="/blog"
+            className={`px-3 py-2 text-sm uppercase ${isAllPosts ? 'text-primary-500 font-bold' : 'hover:text-primary-500 dark:hover:text-primary-500 font-medium text-gray-500 dark:text-gray-300'}`}
+            aria-current={isAllPosts ? 'page' : undefined}
+          >
+            All posts
+          </Link>
+        </li>
         {sortedTags.map((t) => {
-          const displayText = tagDisplayNameMap[t] || t
+          const displayText = getTagDisplayName(t)
           const isNostr = t.toLowerCase() === 'nostr'
+          const isSelected = selectedTag === slug(t)
           return (
             <li key={t} className="my-3">
-              {decodeURI(pathname.split('/tags/')[1]) === slug(t) ? (
-                <h3
-                  className={`text-primary-500 inline px-3 py-2 text-sm font-bold ${isNostr ? '' : 'uppercase'}`.trim()}
-                >
-                  {`${displayText} (${tagCounts[t]})`}
-                </h3>
-              ) : (
-                <Link
-                  href={`/tags/${slug(t)}`}
-                  className={`hover:text-primary-500 dark:hover:text-primary-500 px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-300 ${isNostr ? '' : 'uppercase'}`.trim()}
-                  aria-label={`View posts tagged ${t}`}
-                >
-                  {`${displayText} (${tagCounts[t]})`}
-                </Link>
-              )}
+              <Link
+                href={`/tags/${slug(t)}`}
+                className={`px-3 py-2 text-sm ${isSelected ? 'text-primary-500 font-bold' : 'hover:text-primary-500 dark:hover:text-primary-500 font-medium text-gray-500 dark:text-gray-300'} ${isNostr ? '' : 'uppercase'}`.trim()}
+                aria-label={`View posts tagged ${displayText}`}
+                aria-current={isSelected ? 'page' : undefined}
+              >
+                {`${displayText} (${tagCounts[t]})`}
+              </Link>
             </li>
           )
         })}
       </ul>
-    </>
+    </nav>
   )
 }
 
@@ -135,6 +137,7 @@ export default function ListLayoutWithTags({
   title,
   initialDisplayPosts = [],
   pagination,
+  listStyle = 'default',
   featuredPosts = [],
 }: ListLayoutProps) {
   const pathname = usePathname()
@@ -156,7 +159,7 @@ export default function ListLayoutWithTags({
           <div className="hidden max-w-[280px] min-w-[280px] sm:block">
             <div className="sticky top-6 rounded-sm bg-gray-50 pt-5 shadow-md dark:bg-gray-900/70 dark:shadow-gray-800/40">
               <div className="max-h-[calc(100vh-3rem)] overflow-auto px-6 py-4">
-                <CategorySidebarContent
+                <TagSidebarContent
                   pathname={pathname}
                   sortedTags={sortedTags}
                   tagCounts={tagCounts}
@@ -164,11 +167,11 @@ export default function ListLayoutWithTags({
               </div>
             </div>
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="pb-6 sm:hidden">
               <div className="rounded-sm bg-gray-50 shadow-md dark:bg-gray-900/70 dark:shadow-gray-800/40">
                 <div className="px-6 py-4">
-                  <CategorySidebarContent
+                  <TagSidebarContent
                     pathname={pathname}
                     sortedTags={sortedTags}
                     tagCounts={tagCounts}
@@ -176,6 +179,9 @@ export default function ListLayoutWithTags({
                 </div>
               </div>
             </div>
+            {displayPosts.length === 0 && featuredPosts.length === 0 && (
+              <p className="py-5 text-gray-500 dark:text-gray-400">まだ記事がありません。</p>
+            )}
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {featuredPosts.map((post) => (
                 <li key={post.href} className="py-5">
@@ -237,8 +243,31 @@ export default function ListLayoutWithTags({
                 </li>
               ))}
               {displayPosts.map((post) => {
-                const { path, date, title, summary, tags, images } = post
-                const coverImage = imageOrFallback(Array.isArray(images) ? images[0] : undefined)
+                const { path, date, title, summary, tags } = post
+                if (listStyle === 'compact') {
+                  return (
+                    <li key={path} className="py-3">
+                      <article className="leading-7">
+                        <time
+                          dateTime={date}
+                          suppressHydrationWarning
+                          className="mr-4 text-sm whitespace-nowrap text-gray-500 tabular-nums dark:text-gray-400"
+                        >
+                          {formatDate(date, siteMetadata.locale)}
+                        </time>{' '}
+                        <h2 className="inline text-base font-medium">
+                          <Link
+                            href={`/${path}`}
+                            className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-900 dark:text-gray-100"
+                          >
+                            {title}
+                          </Link>
+                        </h2>
+                      </article>
+                    </li>
+                  )
+                }
+                const coverImage = imageOrFallback(getPostImages(post)[0])
                 return (
                   <li key={path} className="py-5">
                     <article className="flex flex-col gap-4 xl:gap-5">
@@ -294,7 +323,7 @@ export default function ListLayoutWithTags({
                 )
               })}
             </ul>
-            {pagination && pagination.totalPages > 1 && (
+            {listStyle !== 'compact' && pagination && pagination.totalPages > 1 && (
               <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
             )}
           </div>

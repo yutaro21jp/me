@@ -4,11 +4,11 @@ import Main from './Main'
 
 export default async function Page() {
   const featuredSlugs = [
-    'portfolio/blogstr',
-    'portfolio/bitcoin-resistance-1st',
-    'portfolio/bitcoin-raabbit-hole-original-items',
-    'portfolio/anap-brand-channel',
-    'portfolio/bitcoin-tokyo-2024',
+    'blogstr',
+    'bitcoin-resistance-1st',
+    'bitcoin-raabbit-hole-original-items',
+    'anap-brand-channel',
+    'bitcoin-tokyo-2024',
   ]
   const featuredPosts = featuredSlugs
     .map((slug) => allBlogs.find((post) => post.slug === slug))

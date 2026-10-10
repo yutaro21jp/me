@@ -16,6 +16,26 @@ npm run build
 
 Zap は、WebLN の支払い応答の preimage が請求書と一致した場合、または受取サービスが署名した対応する Zap receipt を受信した場合に「Zapped!」を表示します。外部ウォレットの起動や QR 表示だけでは成功扱いにしません。失敗時は英語の案内と再試行、確認が遅い場合はウォレット確認の案内を表示します。
 
+## 記事URL
+
+記事は `data/blog/<slug>.mdx` に置き、`/blog/<slug>` で公開します。たとえば `blogstr.mdx` のURLは `/blog/blogstr` です。
+
+旧 `/blog/portfolio/<slug>` は対応する記事URLへ、旧 `/portfolio` は `/blog` へ恒久転送します。
+
+記事画像は `public/images/blog/` 以下に置き、`/images/blog/...` を参照します。旧 `/images/blog/portfolio/...` は対応する画像URLへ恒久転送します。
+
+## コラム記事
+
+コラム記事には、MDX の frontmatter に `tags: ['column']` を指定します。他のタグと併用できます。
+
+コラムは `data/blog/column/` に置き、ファイル名を `001.mdx`、`002.mdx` のような連番にします。`data/blog/column/001.mdx` の記事URLは `/blog/column/001` です。`/blog/column` はコラム一覧の `/tags/column` へ転送します。
+
+「コラム」はタグ一覧に表示し、`/tags/column` から記事を読めます。コラム記事は通常の Blog 一覧（ページ送りを含む）から除外します。記事が0件でもタグと一覧ページは表示します。
+
+コラム一覧は投稿日、タイトルの順に1行ずつ並べ、画面幅に応じて折り返します。アイキャッチ、説明文、記事タグは出さず、表示件数の制限やページ送りも設けません。
+
+コラムの記事ページと SNS シェア用画像には、共通の `/images/column-cover.webp` を使います。記事ごとに `images` を指定する必要はありません。
+
 ## 画像運用
 
 Vercel Hobby プランの Image Optimization 上限を避けるため、サイト内の画像は事前に WebP 化して `public/images/` から静的配信します。

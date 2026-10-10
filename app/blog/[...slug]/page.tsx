@@ -14,6 +14,9 @@ import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { serializeJsonLd } from '@/lib/jsonLd'
 import { notFound } from 'next/navigation'
+import { getPostImages, isColumnPost } from '@/lib/blog'
+import { COLUMN_COVER_IMAGE } from '@/data/imageDefaults'
+import { COLUMN_TAG, getTagDisplayName } from '@/lib/tags'
 
 const defaultLayout = 'PostLayout'
 const layouts = {
@@ -54,10 +57,8 @@ export async function generateMetadata(props: {
   const modifiedAt = new Date(post.lastmod || post.date).toISOString()
   const authors = authorDetails.map((author) => author.name)
   const ogLocale = siteMetadata.locale?.replace('-', '_') || 'ja_JP'
-  let imageList = [siteMetadata.socialBanner]
-  if (post.images) {
-    imageList = typeof post.images === 'string' ? [post.images] : post.images
-  }
+  const postImages = getPostImages(post)
+  const imageList = postImages.length > 0 ? postImages : [siteMetadata.socialBanner]
   const ogImages = imageList.map((img) => {
     return {
       url: img && img.includes('http') ? img : siteMetadata.siteUrl + img,
@@ -71,6 +72,14 @@ export async function generateMetadata(props: {
     alternates: {
       canonical,
     },
+    ...(isColumnPost(post) && {
+      twitter: {
+        card: 'summary_large_image',
+        title: post.title,
+        description: post.summary,
+        images: ogImages.map((image) => image.url),
+      },
+    }),
     openGraph: {
       title: post.title,
       description: post.summary,
@@ -109,8 +118,13 @@ export default async function Page(props: { params: Promise<{ slug: string[] }> 
   const next = sortedCoreContents[postIndex - 1]
   const authorList = post?.authors || ['default']
   const authorDetails = getAuthorDetails(authorList)
-  const mainContent = coreContent(post)
-  const jsonLd = { ...post.structuredData }
+  const mainContent = { ...coreContent(post), images: getPostImages(post) }
+  const jsonLd = {
+    ...post.structuredData,
+    ...(isColumnPost(post) && {
+      image: new URL(COLUMN_COVER_IMAGE, siteMetadata.siteUrl).toString(),
+    }),
+  }
   jsonLd['author'] = authorDetails.map((author) => {
     return {
       '@type': 'Person',
@@ -135,11 +149,19 @@ export default async function Page(props: { params: Promise<{ slug: string[] }> 
   ]
   const slugParts = post.path.split('/').slice(1) // drop leading "blog"
   slugParts.forEach((part, index) => {
-    const href = `${siteMetadata.siteUrl}/blog/${slugParts.slice(0, index + 1).join('/')}`
+    const isColumnIndex = isColumnPost(post) && index === 0 && part === COLUMN_TAG
+    const href = isColumnIndex
+      ? `${siteMetadata.siteUrl}/tags/${COLUMN_TAG}`
+      : `${siteMetadata.siteUrl}/blog/${slugParts.slice(0, index + 1).join('/')}`
+    const name = isColumnIndex
+      ? getTagDisplayName(COLUMN_TAG)
+      : index === slugParts.length - 1
+        ? post.title
+        : decodeURIComponent(part)
     breadcrumbList.push({
       '@type': 'ListItem',
       position: index + 3,
-      name: index === slugParts.length - 1 ? post.title : decodeURIComponent(part),
+      name,
       item: href,
     })
   })
@@ -165,6 +187,16 @@ export default async function Page(props: { params: Promise<{ slug: string[] }> 
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <Layout content={mainContent} authorDetails={authorDetails} next={next} prev={prev}>
+        {isColumnPost(post) && Layout !== PostBanner && (
+          <Image
+            src={COLUMN_COVER_IMAGE}
+            alt="白黒の未来都市をつなぐカラーネットワークとビットコインのシンボル"
+            width={1200}
+            height={630}
+            loading="eager"
+            className="rounded-xl"
+          />
+        )}
         <MDXLayoutRenderer code={post.body.code} components={components} toc={post.toc} />
       </Layout>
     </>
