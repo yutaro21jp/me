@@ -195,9 +195,9 @@ export default function Home({
               <Link
                 href="/blog"
                 className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                aria-label="ブログ記事をもっと見る"
+                aria-label="ブログ一覧へ"
               >
-                ブログ記事をもっと見る &rarr;
+                ブログ一覧へ &rarr;
               </Link>
             </div>
           </section>
