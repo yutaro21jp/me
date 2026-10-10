@@ -38,6 +38,8 @@ Zap は、WebLN の支払い応答の preimage が請求書と一致した場合
 
 コラムの記事ページと SNS シェア用画像には、共通の `/images/column-cover.webp` を使います。記事ごとに `images` を指定する必要はありません。
 
+トップページは Column、Blog の順に表示します。Column は公開済みの最新5件を投稿日順に並べ、コラム一覧へリンクします。ヘッダーメニューには Column を表示しません。
+
 ## 画像運用
 
 Vercel Hobby プランの Image Optimization 上限を避けるため、サイト内の画像は事前に WebP 化して `public/images/` から静的配信します。

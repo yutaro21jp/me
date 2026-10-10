@@ -15,7 +15,19 @@ type FeaturedPost = {
   images?: string[]
 }
 
-export default function Home({ featuredPosts = [] }: { featuredPosts?: FeaturedPost[] }) {
+type ColumnPost = {
+  path: string
+  date: string
+  title: string
+}
+
+export default function Home({
+  featuredPosts = [],
+  latestColumns = [],
+}: {
+  featuredPosts?: FeaturedPost[]
+  latestColumns?: ColumnPost[]
+}) {
   const author = allAuthors.find((p) => p.slug === 'default')
   if (!author) {
     return <p>Author not found</p>
@@ -64,11 +76,60 @@ export default function Home({ featuredPosts = [] }: { featuredPosts?: FeaturedP
             </div>
           </div>
         </div>
+        {latestColumns.length > 0 && (
+          <section
+            aria-labelledby="home-column-heading"
+            className="border-b border-gray-200 py-8 sm:py-10 dark:border-gray-700"
+          >
+            <h2
+              id="home-column-heading"
+              className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400"
+            >
+              Column
+            </h2>
+            <ul className="mt-5 space-y-4">
+              {latestColumns.map((post) => (
+                <li key={post.path}>
+                  <article className="leading-7 lg:grid lg:grid-cols-4 lg:items-baseline">
+                    <time
+                      dateTime={post.date}
+                      className="mr-4 text-sm whitespace-nowrap text-gray-500 tabular-nums lg:mr-0 dark:text-gray-400"
+                    >
+                      {formatDate(post.date, 'en-US')}
+                    </time>{' '}
+                    <h3 className="inline text-base font-medium sm:text-lg lg:col-span-3">
+                      <Link
+                        href={`/${post.path}`}
+                        className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-900 dark:text-gray-100"
+                      >
+                        {post.title}
+                      </Link>
+                    </h3>
+                  </article>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end pt-5 text-base leading-6 font-medium">
+              <Link
+                href="/column"
+                className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+              >
+                コラム一覧へ &rarr;
+              </Link>
+            </div>
+          </section>
+        )}
         {featuredPosts.length > 0 && (
-          <section>
+          <section aria-labelledby="home-blog-heading" className="pt-8 sm:pt-10">
+            <h2
+              id="home-blog-heading"
+              className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400"
+            >
+              Blog
+            </h2>
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {featuredPosts.map((post) => (
-                <li key={post.slug} className="py-12">
+                <li key={post.slug} className="py-10 first:pt-6 sm:py-12 sm:first:pt-8">
                   <article>
                     <div className="space-y-2 lg:grid lg:grid-cols-4 lg:items-baseline lg:space-y-0">
                       <dl>
@@ -80,14 +141,14 @@ export default function Home({ featuredPosts = [] }: { featuredPosts?: FeaturedP
                       <div className="space-y-5 lg:col-span-3">
                         <div className="space-y-6">
                           <div>
-                            <h2 className="text-2xl leading-8 font-bold tracking-tight">
+                            <h3 className="text-2xl leading-8 font-bold tracking-tight">
                               <Link
                                 href={`/blog/${post.slug}`}
                                 className="text-gray-900 dark:text-gray-100"
                               >
                                 {post.title}
                               </Link>
-                            </h2>
+                            </h3>
                           </div>
                           <Link
                             href={`/blog/${post.slug}`}
