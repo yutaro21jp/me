@@ -11,7 +11,7 @@ export default function GlobalZapProxy({ npub }: Props) {
   useEffect(() => {
     // CDN の @latest を実行せず、lockfile で固定したコードをクライアントでだけ読み込む。
     void import('nostr-zap').catch(() => {
-      console.error('Zapを初期化できませんでした。')
+      console.error('Unable to initialize Zap.')
     })
   }, [])
 
