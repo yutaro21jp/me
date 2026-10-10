@@ -6,7 +6,10 @@ Next.js で構築している個人サイト [yutaro.me](https://yutaro.me) の�
 
 ローカルの作業フォルダは `code/me` です。開発用の環境変数は `.env.example` を参考に `.env.local` に設定します。
 
+依存関係は、リポジトリに固定した Yarn でインストールします。Zap のエラー文を安全に表示するためのパッチを `.yarn/patches/` で管理しているため、`npm install` は使いません。
+
 ```bash
+node .yarn/releases/yarn-3.6.1.cjs install --immutable
 npm run dev
 npm run build
 ```

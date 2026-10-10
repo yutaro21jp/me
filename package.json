@@ -3,13 +3,14 @@
   "version": "2.4.0",
   "private": true,
   "scripts": {
-    "start": "next dev --webpack",
-    "dev": "cross-env INIT_CWD=$PWD next dev --webpack",
-    "build": "cross-env INIT_CWD=$PWD next build --webpack && cross-env NODE_OPTIONS='--experimental-json-modules' node ./scripts/postbuild.mjs",
+    "start": "node scripts/check-zap-patch.mjs && next dev --webpack",
+    "dev": "node scripts/check-zap-patch.mjs && cross-env INIT_CWD=$PWD next dev --webpack",
+    "build": "node scripts/check-zap-patch.mjs && cross-env INIT_CWD=$PWD next build --webpack && cross-env NODE_OPTIONS='--experimental-json-modules' node ./scripts/postbuild.mjs",
     "serve": "next start",
-    "analyze": "cross-env ANALYZE=true next build --webpack",
+    "analyze": "node scripts/check-zap-patch.mjs && cross-env ANALYZE=true next build --webpack",
     "lint": "eslint --fix --ext .js,.jsx,.ts,.tsx app components lib layouts scripts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check:zap": "node scripts/check-zap-patch.mjs"
   },
   "dependencies": {
     "@headlessui/react": "2.2.0",
@@ -132,7 +133,8 @@
     "tar": "7.5.22",
     "uuid": "11.1.1",
     "ws": "7.5.11",
-    "yaml": "2.9.0"
+    "yaml": "2.9.0",
+    "nostr-zap@1.3.0": "patch:nostr-zap@npm%3A1.3.0#./.yarn/patches/nostr-zap-npm-1.3.0-173991245a.patch"
   },
   "packageManager": "yarn@3.6.1"
 }

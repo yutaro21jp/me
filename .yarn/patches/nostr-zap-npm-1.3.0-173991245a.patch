@@ -1,0 +1,41 @@
+diff --git a/dist/main.js b/dist/main.js
+index 55dfd64380b836475507894a33c0bf309d6b4917..cf731d0c058aa883a9f5a436cae9a4513f3fd057 100644
+--- a/dist/main.js
++++ b/dist/main.js
+@@ -9866,11 +9866,13 @@ const $ba417727cf57ac1f$var$renderAmountDialog = async ({ npub: npub, nip19Targe
+ const $ba417727cf57ac1f$var$renderErrorDialog = (message, npub)=>{
+     const errorDialog = $ba417727cf57ac1f$var$renderDialog(`
+     <button class="close-button">X</button>
+-    <p class="error-message">${message}</p>
+-    <a href="https://nosta.me/${npub}" target="_blank">
++    <p class="error-message"></p>
++    <a target="_blank">
+       <button class="cta-button">View Nostr Profile</button>
+     </a>
+   `);
++    errorDialog.querySelector(".error-message").textContent = String(message);
++    errorDialog.querySelector("a").href = `https://nosta.me/${npub}`;
+     errorDialog.addEventListener("close", function() {
+         errorDialog.remove();
+     });
+diff --git a/src/view.js b/src/view.js
+index 5c1891bf2233832c51f7405a2779356e95b98b2e..262e524cbc47f602732e21e8abe255bb79bb3157 100644
+--- a/src/view.js
++++ b/src/view.js
+@@ -340,12 +340,14 @@ const renderAmountDialog = async ({
+ const renderErrorDialog = (message, npub) => {
+   const errorDialog = renderDialog(`
+     <button class="close-button">X</button>
+-    <p class="error-message">${message}</p>
+-    <a href="https://nosta.me/${npub}" target="_blank">
++    <p class="error-message"></p>
++    <a target="_blank">
+       <button class="cta-button">View Nostr Profile</button>
+     </a>
+   `);
+ 
++  errorDialog.querySelector(".error-message").textContent = String(message);
++  errorDialog.querySelector("a").href = `https://nosta.me/${npub}`;
+   errorDialog.addEventListener("close", function () {
+     errorDialog.remove();
+   });
