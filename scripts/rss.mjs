@@ -11,9 +11,9 @@ const outputFolder = process.env.EXPORT ? 'out' : 'public'
 
 const generateRssItem = (config, post) => `
   <item>
-    <guid>${config.siteUrl}/blog/${post.slug}</guid>
+    <guid>${config.siteUrl}/${post.path}</guid>
     <title>${htmlEscape(post.title)}</title>
-    <link>${config.siteUrl}/blog/${post.slug}</link>
+    <link>${config.siteUrl}/${post.path}</link>
     ${post.summary && `<description>${htmlEscape(post.summary)}</description>`}
     <pubDate>${new Date(post.date).toUTCString()}</pubDate>
     <author>${config.email} (${config.author})</author>
@@ -21,11 +21,11 @@ const generateRssItem = (config, post) => `
   </item>
 `
 
-const generateRss = (config, posts, page = 'feed.xml') => `
+const generateRss = (config, posts, page = 'feed.xml', channelPath = '/blog') => `
   <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
     <channel>
       <title>${htmlEscape(config.title)}</title>
-      <link>${config.siteUrl}/blog</link>
+      <link>${config.siteUrl}${channelPath}</link>
       <description>${htmlEscape(config.description)}</description>
       <language>${config.language}</language>
       <managingEditor>${config.email} (${config.author})</managingEditor>
@@ -50,8 +50,17 @@ async function generateRSS(config, allBlogs, page = 'feed.xml') {
       const filteredPosts = publishPosts.filter((post) =>
         post.tags.map((tagName) => slug(tagName)).includes(tag)
       )
-      const rss = generateRss(config, filteredPosts, `tags/${tag}/${page}`)
-      const rssPath = path.join(outputFolder, 'tags', tag)
+      const isColumn = tag === 'column'
+      const feedPath = isColumn ? `column/${page}` : `tags/${tag}/${page}`
+      const rss = generateRss(
+        config,
+        sortPosts(filteredPosts),
+        feedPath,
+        isColumn ? '/column' : '/blog'
+      )
+      const rssPath = isColumn
+        ? path.join(outputFolder, 'column')
+        : path.join(outputFolder, 'tags', tag)
       mkdirSync(rssPath, { recursive: true })
       writeFileSync(path.join(rssPath, page), rss)
     }

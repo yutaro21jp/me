@@ -10,7 +10,7 @@ import Tag from '@/components/Tag'
 import Image from '@/components/Image'
 import siteMetadata from '@/data/siteMetadata'
 import { imageOrFallback } from '@/data/imageDefaults'
-import { getTagDisplayName } from '@/lib/tags'
+import { COLUMN_TAG, getTagDisplayName, getTagHref } from '@/lib/tags'
 import { getPostImages } from '@/lib/blog'
 import tagData from 'app/tag-data.json'
 
@@ -87,7 +87,10 @@ function TagSidebarContent({
   sortedTags: string[]
   tagCounts: Record<string, number>
 }) {
-  const selectedTag = decodeURIComponent(pathname.match(/^\/tags\/([^/]+)/)?.[1] || '')
+  const selectedTag =
+    pathname === '/column' || pathname.startsWith('/column/')
+      ? COLUMN_TAG
+      : decodeURIComponent(pathname.match(/^\/tags\/([^/]+)/)?.[1] || '')
   const isAllPosts = pathname.startsWith('/blog')
 
   return (
@@ -117,7 +120,7 @@ function TagSidebarContent({
           return (
             <li key={t} className="my-3">
               <Link
-                href={`/tags/${slug(t)}`}
+                href={getTagHref(t)}
                 className={`px-3 py-2 text-sm ${isSelected ? 'text-primary-500 font-bold' : 'hover:text-primary-500 dark:hover:text-primary-500 font-medium text-gray-500 dark:text-gray-300'} ${isNostr ? '' : 'uppercase'}`.trim()}
                 aria-label={`View posts tagged ${displayText}`}
                 aria-current={isSelected ? 'page' : undefined}

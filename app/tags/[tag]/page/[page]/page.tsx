@@ -3,7 +3,7 @@ import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 import ListLayout from '@/layouts/ListLayoutWithTags'
 import { allBlogs } from 'contentlayer/generated'
 import tagData from 'app/tag-data.json'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { COLUMN_TAG, getTagDisplayName } from '@/lib/tags'
 
 const POSTS_PER_PAGE = 5
@@ -24,7 +24,7 @@ export const generateStaticParams = async () => {
 export default async function TagPage(props: { params: Promise<{ tag: string; page: string }> }) {
   const params = await props.params
   const tag = decodeURI(params.tag)
-  if (tag === COLUMN_TAG) redirect(`/tags/${COLUMN_TAG}`)
+  if (tag === COLUMN_TAG) permanentRedirect('/column')
   const title = getTagDisplayName(tag)
   const pageNumber = parseInt(params.page)
   const filteredPosts = allCoreContent(

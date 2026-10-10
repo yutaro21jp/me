@@ -10,6 +10,7 @@ import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import ZapButton from '@/components/ZapButton'
+import { isColumnPost } from '@/lib/blog'
 
 const editUrl = (path) => `${siteMetadata.siteRepo}/blob/main/data/${path}`
 const discussUrl = (path) =>
@@ -34,6 +35,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
   const { filePath, path, slug, date, title, tags, noteId } = content
   const author = authorDetails[0]
   const basePath = path.split('/')[0]
+  const isColumn = isColumnPost(content)
 
   return (
     <SectionContainer>
@@ -156,9 +158,9 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                 <Link
                   href={`/${basePath}`}
                   className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                  aria-label="Back to the blog"
+                  aria-label={isColumn ? 'Back to columns' : 'Back to the blog'}
                 >
-                  &larr; ブログ記事一覧へ
+                  &larr; {isColumn ? 'コラム一覧へ' : 'ブログ記事一覧へ'}
                 </Link>
               </div>
             </footer>

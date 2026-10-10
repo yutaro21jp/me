@@ -88,8 +88,18 @@ module.exports = () => {
     async redirects() {
       return [
         {
-          source: '/blog/column',
-          destination: '/tags/column',
+          source: '/blog/column/:slug*',
+          destination: '/column/:slug*',
+          permanent: true,
+        },
+        {
+          source: '/tags/column/feed.xml',
+          destination: '/column/feed.xml',
+          permanent: true,
+        },
+        {
+          source: '/tags/column/:path*',
+          destination: '/column',
           permanent: true,
         },
         {
