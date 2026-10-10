@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
+const { createHash } = require('node:crypto')
+const { readFileSync } = require('node:fs')
 const { withContentlayer } = require('next-contentlayer2')
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -115,6 +117,15 @@ module.exports = () => {
       ]
     },
     webpack: (config, options) => {
+      // A Yarn patch changes package contents without changing its version.
+      // Include the runtime hash so cached builds cannot reuse the unpatched Zap.
+      if (config.cache && config.cache.type === 'filesystem') {
+        const zapHash = createHash('sha256')
+          .update(readFileSync(require.resolve('nostr-zap')))
+          .digest('hex')
+        config.cache.version = `${config.cache.version || ''}|nostr-zap:${zapHash}`
+      }
+
       config.module.rules.push({
         test: /\.svg$/,
         use: ['@svgr/webpack'],
