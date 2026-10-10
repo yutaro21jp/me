@@ -6,13 +6,15 @@ Next.js で構築している個人サイト [yutaro.me](https://yutaro.me) の�
 
 ローカルの作業フォルダは `code/me` です。開発用の環境変数は `.env.example` を参考に `.env.local` に設定します。
 
-依存関係は、リポジトリに固定した Yarn でインストールします。Zap のエラー文を安全に表示するためのパッチを `.yarn/patches/` で管理しているため、`npm install` は使いません。
+依存関係は、リポジトリに固定した Yarn でインストールします。Zap のエラー文を安全に表示し、支払い結果を案内するためのパッチを `.yarn/patches/` で管理しているため、`npm install` は使いません。
 
 ```bash
 node .yarn/releases/yarn-3.6.1.cjs install --immutable
 npm run dev
 npm run build
 ```
+
+Zap は、WebLN の支払い応答の preimage が請求書と一致した場合、または受取サービスが署名した対応する Zap receipt を受信した場合に「Zapped!」を表示します。外部ウォレットの起動や QR 表示だけでは成功扱いにしません。失敗時は英語の案内と再試行、確認が遅い場合はウォレット確認の案内を表示します。
 
 ## 画像運用
 

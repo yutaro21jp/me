@@ -1,41 +1,1914 @@
 diff --git a/dist/main.js b/dist/main.js
-index 55dfd64380b836475507894a33c0bf309d6b4917..cf731d0c058aa883a9f5a436cae9a4513f3fd057 100644
+index 55dfd64380b836475507894a33c0bf309d6b4917..b98418d68949799aa13a4cf02e39906302b160c4 100644
 --- a/dist/main.js
 +++ b/dist/main.js
-@@ -9866,11 +9866,13 @@ const $ba417727cf57ac1f$var$renderAmountDialog = async ({ npub: npub, nip19Targe
- const $ba417727cf57ac1f$var$renderErrorDialog = (message, npub)=>{
-     const errorDialog = $ba417727cf57ac1f$var$renderDialog(`
-     <button class="close-button">X</button>
+@@ -9456,124 +9456,146 @@ $eebec0a1229b249a$export$eab97d15b1788b8d.hmacSha256Sync = (key, ...msgs)=>(0, $
+ $eebec0a1229b249a$export$eab97d15b1788b8d.sha256Sync = (...msgs)=>(0, $b5280835b16caf32$exports.sha256)($eebec0a1229b249a$export$eab97d15b1788b8d.concatBytes(...msgs));
+ 
+ 
+-const $13e8be8e63ffb062$export$f75d0b121ef370b1 = (npub)=>(0, $ae886a92a8b497c6$export$10660ae21dbef115).decode(npub).data;
+-const $13e8be8e63ffb062$var$decodeNip19Entity = (nip19Entity)=>(0, $ae886a92a8b497c6$export$10660ae21dbef115).decode(nip19Entity).data;
+-let $13e8be8e63ffb062$var$cachedProfileMetadata = {};
+-const $13e8be8e63ffb062$export$238c7efc413ff216 = async (authorId)=>{
+-    if ($13e8be8e63ffb062$var$cachedProfileMetadata[authorId]) return $13e8be8e63ffb062$var$cachedProfileMetadata[authorId];
+-    const pool = new (0, $ae886a92a8b497c6$export$db45add7d1880f0c)();
+-    const relays = [
+-        "wss://relay.nostr.band",
+-        "wss://purplepag.es",
+-        "wss://relay.damus.io",
+-        "wss://nostr.wine"
+-    ];
+-    try {
+-        return await pool.get(relays, {
+-            authors: [
+-                authorId
+-            ],
+-            kinds: [
+-                0
+-            ]
+-        });
+-    } catch (error) {
+-        throw new Error("failed to fetch user profile :(");
+-    } finally{
+-        pool.close(relays);
+-    }
++const $13e8be8e63ffb062$export$f75d0b121ef370b1 = (npub) => $ae886a92a8b497c6$export$10660ae21dbef115.decode(npub).data;
++const decodeNip19Entity = (entity) => $ae886a92a8b497c6$export$10660ae21dbef115.decode(entity).data;
++const $13e8be8e63ffb062$export$238c7efc413ff216 = async (authorId) => {
++  const pool = new $ae886a92a8b497c6$export$db45add7d1880f0c();
++  const relays = ["wss://relay.nostr.band", "wss://purplepag.es", "wss://relay.damus.io", "wss://nostr.wine"];
++  try {
++    const metadata = await pool.get(relays, { authors: [authorId], kinds: [0] });
++    if (!metadata) throw new Error();
++    return metadata;
++  } catch {
++    throw new Error("Unable to load the recipient's profile. Please try again.");
++  } finally {
++    pool.close(relays);
++  }
+ };
+-const $13e8be8e63ffb062$export$a12b2cb2bfc97800 = (profileMetadata)=>JSON.parse(profileMetadata.content);
+-const $13e8be8e63ffb062$export$3d19459af3df635a = async (profileMetadata)=>{
+-    const zapEndpoint = await (0, $ae886a92a8b497c6$export$14e0982e3a536e29).getZapEndpoint(profileMetadata);
+-    if (!zapEndpoint) throw new Error("failed to retrieve zap endpoint :(");
+-    return zapEndpoint;
++const $13e8be8e63ffb062$export$a12b2cb2bfc97800 = (metadata) => JSON.parse(metadata.content);
++const fetchJson = async (url) => {
++  const controller = new AbortController();
++  const timeout = setTimeout(() => controller.abort(), 2e4);
++  try {
++    const response = await fetch(url, { signal: controller.signal });
++    if (!response.ok) throw new Error("The payment service is unavailable. Please try again.");
++    return await response.json();
++  } finally {
++    clearTimeout(timeout);
++  }
+ };
+-const $13e8be8e63ffb062$var$signEvent = async (zapEvent, anon)=>{
+-    if ($13e8be8e63ffb062$export$ce517a111590bc8e() && !anon) try {
+-        return await window.nostr.signEvent(zapEvent);
+-    } catch (e) {
+-    // fail silently and sign event as an anonymous user
+-    }
+-    return (0, $ae886a92a8b497c6$export$ba1b4a5137924b04)(zapEvent, (0, $ae886a92a8b497c6$export$38f4f9e52b1651a4)());
++const $13e8be8e63ffb062$export$3d19459af3df635a = async (metadata) => {
++  const { lud06, lud16 } = $13e8be8e63ffb062$export$a12b2cb2bfc97800(metadata);
++  let lnurl;
++  if (lud06) {
++    lnurl = new TextDecoder().decode($c97f81be67511c58$export$27c42482533637da.fromWords($c97f81be67511c58$export$27c42482533637da.decode(lud06, 1e3).words));
++  } else if (lud16) {
++    const [name, domain] = lud16.split("@");
++    lnurl = `https://${domain}/.well-known/lnurlp/${name}`;
++  } else {
++    throw new Error("This recipient does not have a Lightning address.");
++  }
++  const endpoint = await fetchJson(lnurl);
++  if (!endpoint.allowsNostr || !/^[a-f0-9]{64}$/i.test(endpoint.nostrPubkey) || !endpoint.callback) {
++    throw new Error("The recipient's payment service does not support Zaps.");
++  }
++  return endpoint;
+ };
+-const $13e8be8e63ffb062$var$makeZapEvent = async ({ profile: profile, nip19Target: nip19Target, amount: amount, relays: relays, comment: comment, anon: anon })=>{
+-    const zapEvent = (0, $ae886a92a8b497c6$export$14e0982e3a536e29).makeZapRequest({
+-        profile: profile,
+-        event: nip19Target && nip19Target.startsWith("note") ? $13e8be8e63ffb062$var$decodeNip19Entity(nip19Target) : undefined,
+-        amount: amount,
+-        relays: relays,
+-        comment: comment
+-    });
+-    const naddrData = nip19Target && nip19Target.startsWith("naddr") ? $13e8be8e63ffb062$var$decodeNip19Entity(nip19Target) : undefined;
+-    if (naddrData) {
+-        const relays = naddrData.relays ? naddrData.relays.reduce((acc, r)=>`${r},${acc}`, "") : "";
+-        zapEvent.tags.push([
+-            "a",
+-            `${naddrData.kind}:${naddrData.pubkey}:${naddrData.identifier}`,
+-            relays
+-        ]);
++const signEvent = async (event, anon) => {
++  if ($13e8be8e63ffb062$export$ce517a111590bc8e() && !anon) {
++    try {
++      return await window.nostr.signEvent(event);
++    } catch {
+     }
+-    // add anon tag so apps like damus display zap as anonymous
+-    if (!$13e8be8e63ffb062$export$ce517a111590bc8e() || anon) zapEvent.tags.push([
+-        "anon"
+-    ]);
+-    return $13e8be8e63ffb062$var$signEvent(zapEvent, anon);
++  }
++  return $ae886a92a8b497c6$export$ba1b4a5137924b04(event, $ae886a92a8b497c6$export$38f4f9e52b1651a4());
+ };
+-const $13e8be8e63ffb062$export$16630ab37b92a682 = async ({ zapEndpoint: zapEndpoint, amount: amount, comment: comment, authorId: authorId, nip19Target: nip19Target, normalizedRelays: normalizedRelays, anon: anon })=>{
+-    const zapEvent = await $13e8be8e63ffb062$var$makeZapEvent({
+-        profile: authorId,
+-        nip19Target: nip19Target,
+-        amount: amount,
+-        relays: normalizedRelays,
+-        comment: comment,
+-        anon: anon
+-    });
+-    let url = `${zapEndpoint}?amount=${amount}&nostr=${encodeURIComponent(JSON.stringify(zapEvent))}`;
+-    if (comment) url = `${url}&comment=${encodeURIComponent(comment)}`;
+-    const res = await fetch(url);
+-    const { pr: invoice, reason: reason, status: status } = await res.json();
+-    if (invoice) return invoice;
+-    else if (status === "ERROR") throw new Error(reason ?? "Unable to fetch invoice");
+-    else throw new Error("Unable to fetch invoice");
++const makeZapEvent = async ({ profile, nip19Target, amount, relays, comment, anon }) => {
++  const target = nip19Target ? $ae886a92a8b497c6$export$10660ae21dbef115.decode(nip19Target) : void 0;
++  const zapEvent = $ae886a92a8b497c6$export$14e0982e3a536e29.makeZapRequest({
++    profile,
++    event: target?.type === "note" ? target.data : target?.type === "nevent" ? target.data.id : void 0,
++    amount,
++    relays,
++    comment
++  });
++  const naddr = target?.type === "naddr" ? target.data : void 0;
++  if (naddr) zapEvent.tags.push(["a", `${naddr.kind}:${naddr.pubkey}:${naddr.identifier}`, (naddr.relays || []).join(",")]);
++  if (!$13e8be8e63ffb062$export$ce517a111590bc8e() || anon) zapEvent.tags.push(["anon"]);
++  return signEvent(zapEvent, anon);
+ };
+-const $13e8be8e63ffb062$export$ce517a111590bc8e = ()=>{
+-    return window !== undefined && window.nostr !== undefined;
++const toHex = (bytes) => Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
++const decodeInvoice = (invoice) => {
++  const { prefix, words } = $c97f81be67511c58$export$27c42482533637da.decode(invoice.toLowerCase(), 5e3);
++  const match = /^ln(?:bc|tb|bcrt)(\d+)([munp]?)$/.exec(prefix);
++  if (!match || words.length < 111) throw new Error("Invalid payment invoice.");
++  const value = BigInt(match[1]);
++  const multipliers = { "": 100000000000n, m: 100000000n, u: 100000n, n: 100n };
++  const amount = match[2] === "p" ? value % 10n === 0n ? value / 10n : -1n : value * multipliers[match[2]];
++  const hashes = {};
++  const end = words.length - 104;
++  for (let index = 7; index < end; ) {
++    const type = words[index++];
++    const length = words[index++] * 32 + words[index++];
++    if (!Number.isInteger(length) || index + length > end) throw new Error("Invalid payment invoice.");
++    if (type === 1 || type === 23) hashes[type] = toHex($c97f81be67511c58$export$27c42482533637da.fromWords(words.slice(index, index + length)));
++    index += length;
++  }
++  if (amount <= 0n || !/^[a-f0-9]{64}$/.test(hashes[1])) throw new Error("Invalid payment invoice.");
++  return { amount, paymentHash: hashes[1], descriptionHash: hashes[23] };
+ };
+-const $13e8be8e63ffb062$export$554ff54ec5b056e7 = ({ relays: relays, invoice: invoice, onSuccess: onSuccess })=>{
+-    const pool = new (0, $ae886a92a8b497c6$export$db45add7d1880f0c)();
+-    const normalizedRelays = Array.from(new Set([
+-        ...relays,
+-        "wss://relay.nostr.band"
+-    ]));
+-    const closePool = ()=>{
+-        if (pool) pool.close(normalizedRelays);
+-    };
+-    const since = Math.round(Date.now() / 1000);
+-    // check for zap receipt every 5 seconds
+-    const intervalId = setInterval(()=>{
+-        const sub = pool.sub(normalizedRelays, [
+-            {
+-                kinds: [
+-                    9735
+-                ],
+-                since: since
+-            }
+-        ]);
+-        sub.on("event", (event)=>{
+-            if (event.tags.find((t)=>t[0] === "bolt11" && t[1] === invoice)) {
+-                onSuccess();
+-                closePool();
+-                clearInterval(intervalId);
+-            }
+-        });
+-    }, 5000);
+-    return ()=>{
+-        closePool();
+-        clearInterval(intervalId);
+-    };
++const isPaymentConfirmed = (invoice, response) => {
++  try {
++    if (!/^[a-f0-9]{64}$/i.test(response?.preimage)) return false;
++    const bytes = Uint8Array.from(response.preimage.match(/../g), (byte) => parseInt(byte, 16));
++    return toHex($b5280835b16caf32$exports.sha256(bytes)) === decodeInvoice(invoice).paymentHash;
++  } catch {
++    return false;
++  }
++};
++const $13e8be8e63ffb062$export$16630ab37b92a682 = async ({ zapEndpoint, amount, comment, authorId, nip19Target, normalizedRelays, anon }) => {
++  const zapEvent = await makeZapEvent({ profile: authorId, nip19Target, amount, relays: normalizedRelays, comment, anon });
++  const description = JSON.stringify(zapEvent);
++  const url = new URL(zapEndpoint.callback);
++  url.searchParams.set("amount", String(amount));
++  url.searchParams.set("nostr", description);
++  if (comment) url.searchParams.set("comment", comment);
++  const { pr: invoice, reason, status } = await fetchJson(url);
++  if (!invoice || status === "ERROR") throw new Error(reason ?? "Unable to get a payment invoice. Please try again.");
++  const details = decodeInvoice(invoice);
++  if (details.amount !== BigInt(amount) || details.descriptionHash !== toHex($b5280835b16caf32$exports.sha256(new TextEncoder().encode(description)))) {
++    throw new Error("The payment invoice does not match this Zap. Please try again.");
++  }
++  return { invoice, zapEvent, providerPubkey: zapEndpoint.nostrPubkey.toLowerCase() };
++};
++const $13e8be8e63ffb062$export$ce517a111590bc8e = () => typeof window !== "undefined" && window.nostr !== void 0;
++const $13e8be8e63ffb062$export$554ff54ec5b056e7 = ({ relays, invoice, zapEvent, providerPubkey, onSuccess }) => {
++  const pool = new $ae886a92a8b497c6$export$db45add7d1880f0c();
++  const normalizedRelays = Array.from(/* @__PURE__ */ new Set([...relays, "wss://relay.nostr.band"]));
++  const recipient = zapEvent.tags.find((tag) => tag[0] === "p")[1];
++  let closed = false;
++  const sub = pool.sub(normalizedRelays, [{ kinds: [9735], authors: [providerPubkey], "#p": [recipient], since: zapEvent.created_at - 60 }]);
++  const close = () => {
++    if (closed) return;
++    closed = true;
++    sub.unsub();
++    pool.close(normalizedRelays);
++  };
++  sub.on("event", (event) => {
++    if (closed || event.pubkey !== providerPubkey || !event.tags.some((tag) => tag[0] === "bolt11" && tag[1] === invoice)) return;
++    try {
++      const description = event.tags.find((tag) => tag[0] === "description")?.[1];
++      const request = JSON.parse(description);
++      if (request.id !== zapEvent.id || decodeInvoice(invoice).descriptionHash !== toHex($b5280835b16caf32$exports.sha256(new TextEncoder().encode(description)))) return;
++      for (const target of zapEvent.tags.filter((tag) => ["p", "e", "a"].includes(tag[0]))) {
++        if (!event.tags.some((tag) => tag[0] === target[0] && tag[1] === target[1])) return;
++      }
++      close();
++      onSuccess();
++    } catch {
++    }
++  });
++  return close;
+ };
+-
+ 
+ const $ec69506f2f32e88e$var$CACHE_PREFIX = "nostrZap.";
+ const $ec69506f2f32e88e$var$LIGHTNING_URI_KEY = "lightningUri";
+@@ -9590,158 +9612,197 @@ const $ec69506f2f32e88e$export$31aa9de2043a63be = ()=>$ec69506f2f32e88e$var$getC
+ const $ec69506f2f32e88e$export$d01920d2567d4232 = (value)=>$ec69506f2f32e88e$var$setCachedValue($ec69506f2f32e88e$var$LIGHTNING_URI_KEY, value);
+ 
+ 
+-let $ba417727cf57ac1f$var$shadow = null;
+-const $ba417727cf57ac1f$var$hexToRgb = (hex)=>{
+-    hex = hex.replace(/^#/, "");
+-    if (hex.length === 3) hex = hex.split("").map((char)=>char + char).join("");
+-    const bigint = parseInt(hex, 16);
+-    const r = bigint >> 16 & 255;
+-    const g = bigint >> 8 & 255;
+-    const b = bigint & 255;
+-    return {
+-        r: r,
+-        g: g,
+-        b: b
+-    };
++const feedbackTokens = `
++  :host {
++    --zap-surface: #fff;
++    --zap-text: #171923;
++    --zap-muted: #4a5568;
++    --zap-accent: #7f00ff;
++    --zap-accent-hover: #4b0082;
++    --zap-success: #166534;
++    --zap-error: #b91c1c;
++    --zap-border: #cbd5e0;
++    --zap-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
++    --zap-body: 1rem;
++    --zap-title: 1.75rem;
++    --zap-error-title: 1.5rem;
++    --zap-icon: 2rem;
++    --zap-control: 44px;
++    --zap-space-1: 4px;
++    --zap-space-2: 8px;
++    --zap-space-3: 12px;
++    --zap-space-4: 16px;
++    --zap-space-6: 24px;
++    --zap-space-8: 32px;
++    --zap-radius: 10px;
++    --zap-shadow: 0 10px 32px rgb(0 0 0 / 12%);
++  }
++`;
++let shadow = null;
++const hexToRgb = (hex) => {
++  hex = hex.replace(/^#/, "");
++  if (hex.length === 3) {
++    hex = hex.split("").map((char) => char + char).join("");
++  }
++  const bigint = parseInt(hex, 16);
++  const r = bigint >> 16 & 255;
++  const g = bigint >> 8 & 255;
++  const b = bigint & 255;
++  return { r, g, b };
+ };
+-const $ba417727cf57ac1f$var$getBrightness = ({ r: r, g: g, b: b })=>{
+-    return (r * 299 + g * 587 + b * 114) / 1000;
++const getBrightness = ({ r, g, b }) => {
++  return (r * 299 + g * 587 + b * 114) / 1e3;
+ };
+-const $ba417727cf57ac1f$var$getContrastingTextColor = (hex)=>{
+-    const rgb = $ba417727cf57ac1f$var$hexToRgb(hex);
+-    const brightness = $ba417727cf57ac1f$var$getBrightness(rgb);
+-    return brightness < 128 ? "#fff" : "#000";
++const getContrastingTextColor = (hex) => {
++  const rgb = hexToRgb(hex);
++  const brightness = getBrightness(rgb);
++  return brightness < 128 ? "#fff" : "#000";
+ };
+-const $ba417727cf57ac1f$var$renderDialog = (htmlStrTemplate)=>{
+-    const dialog = document.createElement("dialog");
+-    dialog.classList.add("nostr-zap-dialog");
+-    dialog.innerHTML = htmlStrTemplate;
+-    // close dialog on backdrop click
+-    dialog.addEventListener("click", function({ clientX: clientX, clientY: clientY }) {
+-        const { left: left, right: right, top: top, bottom: bottom } = dialog.getBoundingClientRect();
+-        if (clientX === 0 && clientY === 0) return;
+-        if (clientX < left || clientX > right || clientY < top || clientY > bottom) dialog.close();
+-    });
+-    $ba417727cf57ac1f$var$shadow.appendChild(dialog);
+-    return dialog;
++const renderDialog = (htmlStrTemplate) => {
++  const dialog = document.createElement("dialog");
++  dialog.classList.add("nostr-zap-dialog");
++  dialog.innerHTML = htmlStrTemplate;
++  dialog.addEventListener("click", function({ clientX, clientY }) {
++    const { left, right, top, bottom } = dialog.getBoundingClientRect();
++    if (clientX === 0 && clientY === 0) {
++      return;
++    }
++    if (clientX < left || clientX > right || clientY < top || clientY > bottom) {
++      dialog.close();
++    }
++  });
++  shadow.appendChild(dialog);
++  return dialog;
+ };
+-const $ba417727cf57ac1f$var$renderInvoiceDialog = ({ dialogHeader: dialogHeader, invoice: invoice, relays: relays, buttonColor: buttonColor })=>{
+-    const cachedLightningUri = (0, $ec69506f2f32e88e$export$31aa9de2043a63be)();
+-    const options = [
+-        {
+-            label: "Default Wallet",
+-            value: "lightning:"
+-        },
+-        {
+-            label: "Strike",
+-            value: "strike:lightning:"
+-        },
+-        {
+-            label: "Cash App",
+-            value: "https://cash.app/launch/lightning/"
+-        },
+-        {
+-            label: "Muun",
+-            value: "muun:"
+-        },
+-        {
+-            label: "Blue Wallet",
+-            value: "bluewallet:lightning:"
+-        },
+-        {
+-            label: "Wallet of Satoshi",
+-            value: "walletofsatoshi:lightning:"
+-        },
+-        {
+-            label: "Zebedee",
+-            value: "zebedee:lightning:"
+-        },
+-        {
+-            label: "Zeus LN",
+-            value: "zeusln:lightning:"
+-        },
+-        {
+-            label: "Phoenix",
+-            value: "phoenix://"
+-        },
+-        {
+-            label: "Breez",
+-            value: "breez:"
+-        },
+-        {
+-            label: "Bitcoin Beach",
+-            value: "bitcoinbeach://"
+-        },
+-        {
+-            label: "Blixt",
+-            value: "blixtwallet:lightning:"
+-        },
+-        {
+-            label: "River",
+-            value: "river://"
+-        }
+-    ];
+-    const invoiceDialog = $ba417727cf57ac1f$var$renderDialog(`
+-        <button class="close-button">X</button>
++const renderInvoiceDialog = ({
++  dialogHeader,
++  invoice,
++  zapEvent,
++  providerPubkey,
++  notice,
++  relays,
++  buttonColor
++}) => {
++  let cachedLightningUri;
++  try {
++    cachedLightningUri = $ec69506f2f32e88e$export$31aa9de2043a63be();
++  } catch {
++  }
++  const options = [
++    { label: "Default Wallet", value: "lightning:" },
++    { label: "Strike", value: "strike:lightning:" },
++    { label: "Cash App", value: "https://cash.app/launch/lightning/" },
++    { label: "Muun", value: "muun:" },
++    { label: "Blue Wallet", value: "bluewallet:lightning:" },
++    { label: "Wallet of Satoshi", value: "walletofsatoshi:lightning:" },
++    { label: "Zebedee", value: "zebedee:lightning:" },
++    { label: "Zeus LN", value: "zeusln:lightning:" },
++    { label: "Phoenix", value: "phoenix://" },
++    { label: "Breez", value: "breez:" },
++    { label: "Bitcoin Beach", value: "bitcoinbeach://" },
++    { label: "Blixt", value: "blixtwallet:lightning:" },
++    { label: "River", value: "river://" }
++  ];
++  const invoiceDialog = renderDialog(`
++        <button class="close-button" aria-label="Close">\xD7</button>
+         ${dialogHeader}
+         <div class="qrcode">
+-          <div class="overlay">copied invoice to clipboard</div>
++          <div class="overlay">Invoice copied</div>
+         </div>
+-        <p>click QR code to copy invoice</p>
+-        <select name="lightning-wallet">
+-          ${options.map(({ label: label, value: value })=>`<option value="${value}" ${cachedLightningUri === value ? "selected" : ""}>${label}</option>`).join("")}
++        <p class="qr-hint">Tap the QR code to copy the invoice.</p>
++        <p class="payment-status" role="status" aria-live="polite"></p>
++        <select name="lightning-wallet" aria-label="Choose a wallet">
++          ${options.map(
++    ({ label, value }) => `<option value="${value}" ${cachedLightningUri === value ? "selected" : ""}>${label}</option>`
++  ).join("")}
+         </select>
+         <button class="cta-button"
+-          ${buttonColor ? `style="background-color: ${buttonColor}; color: ${$ba417727cf57ac1f$var$getContrastingTextColor(buttonColor)}"` : ""} 
++          ${buttonColor ? `style="background-color: ${buttonColor}; color: ${getContrastingTextColor(
++    buttonColor
++  )}"` : ""} 
+         >Open Wallet</button>
+       `);
+-    const qrCodeEl = invoiceDialog.querySelector(".qrcode");
+-    const lightningWalletEl = invoiceDialog.querySelector('select[name="lightning-wallet"]');
+-    const ctaButtonEl = invoiceDialog.querySelector(".cta-button");
+-    const overlayEl = qrCodeEl.querySelector(".overlay");
+-    const closePool = (0, $13e8be8e63ffb062$export$554ff54ec5b056e7)({
+-        relays: relays,
+-        invoice: invoice,
+-        onSuccess: ()=>{
+-            invoiceDialog.close();
+-        }
+-    });
+-    new (0, (/*@__PURE__*/$parcel$interopDefault($58QMB)))(qrCodeEl, {
+-        text: invoice,
+-        quietZone: 10
+-    });
+-    qrCodeEl.addEventListener("click", function() {
+-        navigator.clipboard.writeText(invoice);
+-        overlayEl.classList.add("show");
+-        setTimeout(()=>overlayEl.classList.remove("show"), 2000);
+-    });
+-    ctaButtonEl.addEventListener("click", function() {
+-        (0, $ec69506f2f32e88e$export$d01920d2567d4232)(lightningWalletEl.value);
+-        window.location.href = `${lightningWalletEl.value}${invoice}`;
+-    });
+-    invoiceDialog.addEventListener("close", function() {
+-        closePool();
+-        invoiceDialog.remove();
+-    });
+-    invoiceDialog.querySelector(".close-button").addEventListener("click", function() {
+-        invoiceDialog.close();
+-    });
+-    return invoiceDialog;
++  const qrCodeEl = invoiceDialog.querySelector(".qrcode");
++  const lightningWalletEl = invoiceDialog.querySelector(
++    'select[name="lightning-wallet"]'
++  );
++  const ctaButtonEl = invoiceDialog.querySelector(".cta-button");
++  const overlayEl = qrCodeEl.querySelector(".overlay");
++  const statusEl = invoiceDialog.querySelector(".payment-status");
++  statusEl.textContent = notice || "Waiting for payment confirmation\u2026";
++  if (notice) statusEl.dataset.state = "error";
++  const confirmationTimer = setTimeout(() => {
++    statusEl.textContent = "Still waiting for confirmation. If you paid, check your wallet before sending again.";
++    delete statusEl.dataset.state;
++  }, 6e4);
++  const closePool = $13e8be8e63ffb062$export$554ff54ec5b056e7({
++    relays,
++    invoice,
++    zapEvent,
++    providerPubkey,
++    onSuccess: () => {
++      invoiceDialog.close();
++      showSuccessDialog(zapEvent);
++    }
++  });
++  new (0, $parcel$interopDefault($58QMB))(qrCodeEl, { text: invoice, quietZone: 10 });
++  const copyInvoice = async () => {
++    try {
++      await navigator.clipboard.writeText(invoice);
++      overlayEl.classList.add("show");
++      setTimeout(() => overlayEl.classList.remove("show"), 2e3);
++    } catch {
++      statusEl.textContent = "Could not copy the invoice. Scan the QR code or open your wallet.";
++      statusEl.dataset.state = "error";
++    }
++  };
++  qrCodeEl.setAttribute("role", "button");
++  qrCodeEl.setAttribute("tabindex", "0");
++  qrCodeEl.setAttribute("aria-label", "Copy payment invoice");
++  qrCodeEl.addEventListener("click", copyInvoice);
++  qrCodeEl.addEventListener("keydown", (event) => {
++    if (event.key === "Enter" || event.key === " ") {
++      event.preventDefault();
++      void copyInvoice();
++    }
++  });
++  ctaButtonEl.addEventListener("click", function() {
++    statusEl.textContent = "Complete payment in your wallet. Waiting for confirmation\u2026";
++    delete statusEl.dataset.state;
++    try {
++      $ec69506f2f32e88e$export$d01920d2567d4232(lightningWalletEl.value);
++    } catch {
++    }
++    window.location.href = `${lightningWalletEl.value}${invoice}`;
++  });
++  invoiceDialog.addEventListener("close", function() {
++    clearTimeout(confirmationTimer);
++    closePool();
++    invoiceDialog.remove();
++  });
++  invoiceDialog.querySelector(".close-button").addEventListener("click", function() {
++    invoiceDialog.close();
++  });
++  return invoiceDialog;
+ };
+-const $ba417727cf57ac1f$var$renderAmountDialog = async ({ npub: npub, nip19Target: nip19Target, relays: relays, buttonColor: buttonColor, anon: anon })=>{
+-    const truncateNip19Entity = (hex)=>`${hex.substring(0, 12)}...${hex.substring(hex.length - 12)}`;
+-    const normalizedRelays = relays ? relays.split(",") : [
+-        "wss://relay.nostr.band",
+-        "wss://relay.damus.io",
+-        "wss://nos.lol"
+-    ];
+-    const authorId = (0, $13e8be8e63ffb062$export$f75d0b121ef370b1)(npub);
+-    const metadataPromise = (0, $13e8be8e63ffb062$export$238c7efc413ff216)(authorId);
+-    const nostrichAvatar = "https://pbs.twimg.com/profile_images/1604195803748306944/LxHDoJ7P_400x400.jpg";
+-    const getDialogHeader = async ()=>{
+-        const { picture: picture, display_name: display_name, name: name } = (0, $13e8be8e63ffb062$export$a12b2cb2bfc97800)(await metadataPromise);
+-        const userAvatar = picture || nostrichAvatar;
+-        return `
++const renderAmountDialog = async ({
++  npub,
++  nip19Target,
++  relays,
++  buttonColor,
++  anon
++}) => {
++  const truncateNip19Entity = (hex) => `${hex.substring(0, 12)}...${hex.substring(hex.length - 12)}`;
++  const normalizedRelays = relays ? relays.split(",") : ["wss://relay.nostr.band", "wss://relay.damus.io", "wss://nos.lol"];
++  const authorId = $13e8be8e63ffb062$export$f75d0b121ef370b1(npub);
++  const metadataPromise = $13e8be8e63ffb062$export$238c7efc413ff216(authorId);
++  const nostrichAvatar = "https://pbs.twimg.com/profile_images/1604195803748306944/LxHDoJ7P_400x400.jpg";
++  const getDialogHeader = async () => {
++    const { picture, display_name, name } = $13e8be8e63ffb062$export$a12b2cb2bfc97800(
++      await metadataPromise
++    );
++    const userAvatar = picture || nostrichAvatar;
++    return `
+       <h2>${display_name || name}</h2>
+         <img
+           src="${userAvatar}"
+@@ -9751,9 +9812,9 @@ const $ba417727cf57ac1f$var$renderAmountDialog = async ({ npub: npub, nip19Targe
+         />
+       <p>${nip19Target ? truncateNip19Entity(nip19Target) : truncateNip19Entity(npub)}</p>
+     `;
+-    };
+-    const amountDialog = $ba417727cf57ac1f$var$renderDialog(`
+-      <button class="close-button">X</button>
++  };
++  const amountDialog = renderDialog(`
++      <button class="close-button" aria-label="Close">\xD7</button>
+       <div class="dialog-header-container">
+         <h2 class="skeleton-placeholder"></h2>
+           <img
+@@ -9765,177 +9826,247 @@ const $ba417727cf57ac1f$var$renderAmountDialog = async ({ npub: npub, nip19Targe
+         <p class="skeleton-placeholder"></p>
+       </div>
+       <div class="preset-zap-options-container">
+-        <button data-value="21">21 ⚡️</button>
+-        <button data-value="69">69 ⚡️</button>
+-        <button data-value="420">420 ⚡️</button>
+-        <button data-value="1337">1337 ⚡️</button>
+-        <button data-value="5000">5k ⚡️</button>
+-        <button data-value="10000">10k ⚡️</button>
+-        <button data-value="21000">21k ⚡️</button>
+-        <button data-value="1000000">1M ⚡️</button>
++        <button data-value="21">21 \u26A1\uFE0F</button>
++        <button data-value="69">69 \u26A1\uFE0F</button>
++        <button data-value="420">420 \u26A1\uFE0F</button>
++        <button data-value="1337">1337 \u26A1\uFE0F</button>
++        <button data-value="5000">5k \u26A1\uFE0F</button>
++        <button data-value="10000">10k \u26A1\uFE0F</button>
++        <button data-value="21000">21k \u26A1\uFE0F</button>
++        <button data-value="1000000">1M \u26A1\uFE0F</button>
+       </div>
+       <form>
+-        <input name="amount" type="number" placeholder="amount in sats" required />
+-        <input name="comment" placeholder="optional comment" />
++        <input name="amount" type="number" min="1" step="1" aria-label="Amount in sats" placeholder="Amount in sats" required />
++        <input name="comment" aria-label="Optional comment" placeholder="Optional comment" />
+         <button class="cta-button" 
+-          ${buttonColor ? `style="background-color: ${buttonColor}; color: ${$ba417727cf57ac1f$var$getContrastingTextColor(buttonColor)}"` : ""} 
++          ${buttonColor ? `style="background-color: ${buttonColor}; color: ${getContrastingTextColor(
++    buttonColor
++  )}"` : ""} 
+           type="submit" disabled>Zap</button>
+       </form>
+     `);
+-    const presetButtonsContainer = amountDialog.querySelector(".preset-zap-options-container");
+-    const form = amountDialog.querySelector("form");
+-    const amountInput = amountDialog.querySelector('input[name="amount"]');
+-    const commentInput = amountDialog.querySelector('input[name="comment"]');
+-    const zapButtton = amountDialog.querySelector('button[type="submit"]');
+-    const dialogHeaderContainer = amountDialog.querySelector(".dialog-header-container");
+-    const handleError = (error)=>{
+-        amountDialog.close();
+-        const errorDialog = $ba417727cf57ac1f$var$renderErrorDialog(error, npub);
+-        errorDialog.showModal();
+-    };
+-    getDialogHeader().then((htmlString)=>{
+-        dialogHeaderContainer.innerHTML = htmlString;
+-        zapButtton.disabled = false;
+-    }).catch(handleError);
+-    const setZapButtonToLoadingState = ()=>{
+-        zapButtton.disabled = true;
+-        zapButtton.innerHTML = `<div class="spinner">Loading</div>`;
+-    };
+-    const setZapButtonToDefaultState = ()=>{
+-        zapButtton.disabled = false;
+-        zapButtton.innerHTML = "Zap";
+-    };
+-    const setAmountValue = (value)=>{
+-        amountInput.value = value;
+-    };
+-    amountDialog.addEventListener("close", function() {
+-        setZapButtonToDefaultState();
+-        form.reset();
++  const presetButtonsContainer = amountDialog.querySelector(
++    ".preset-zap-options-container"
++  );
++  const form = amountDialog.querySelector("form");
++  const amountInput = amountDialog.querySelector('input[name="amount"]');
++  const commentInput = amountDialog.querySelector('input[name="comment"]');
++  const zapButtton = amountDialog.querySelector('button[type="submit"]');
++  const dialogHeaderContainer = amountDialog.querySelector(
++    ".dialog-header-container"
++  );
++  const handleError = (error) => {
++    if (!amountDialog.open) return;
++    const savedAmount = amountInput.value;
++    const savedComment = commentInput.value;
++    amountDialog.close();
++    const errorDialog = renderErrorDialog(error, npub, async () => {
++      amountDialog.remove();
++      const dialog = await $ba417727cf57ac1f$export$2cd8252107eb640b({ npub, noteId: nip19Target, relays, buttonColor, anon });
++      if (dialog) {
++        dialog.querySelector('input[name="amount"]').value = savedAmount;
++        dialog.querySelector('input[name="comment"]').value = savedComment;
++      }
+     });
+-    amountDialog.querySelector(".close-button").addEventListener("click", function() {
++    errorDialog.showModal();
++  };
++  getDialogHeader().then((htmlString) => {
++    dialogHeaderContainer.innerHTML = htmlString;
++    zapButtton.disabled = false;
++  }).catch(handleError);
++  const setZapButtonToLoadingState = () => {
++    zapButtton.disabled = true;
++    zapButtton.innerHTML = `<div class="spinner">Loading</div>`;
++  };
++  const setZapButtonToDefaultState = () => {
++    zapButtton.disabled = false;
++    zapButtton.innerHTML = "Zap";
++  };
++  const setAmountValue = (value) => {
++    amountInput.value = value;
++  };
++  amountDialog.addEventListener("close", function() {
++    setZapButtonToDefaultState();
++  });
++  amountDialog.querySelector(".close-button").addEventListener("click", function() {
++    amountDialog.close();
++  });
++  presetButtonsContainer.addEventListener("click", function(event) {
++    if (event.target.matches("button")) {
++      setAmountValue(event.target.getAttribute("data-value"));
++      amountInput.focus();
++    }
++  });
++  form.addEventListener("submit", async function(event) {
++    event.preventDefault();
++    setZapButtonToLoadingState();
++    const amount = Number(amountInput.value) * 1e3;
++    const comment = commentInput.value;
++    try {
++      const { invoice, zapEvent, providerPubkey } = await $13e8be8e63ffb062$export$16630ab37b92a682({
++        zapEndpoint: await $13e8be8e63ffb062$export$3d19459af3df635a(await metadataPromise),
++        amount,
++        comment,
++        authorId,
++        nip19Target,
++        normalizedRelays,
++        anon
++      });
++      if (!amountDialog.open) return;
++      const showInvoiceDialog = async (notice) => {
++        const invoiceDialog = renderInvoiceDialog({
++          dialogHeader: await getDialogHeader(),
++          invoice,
++          zapEvent,
++          providerPubkey,
++          notice,
++          relays: normalizedRelays,
++          buttonColor
++        });
++        const openWalletButton = invoiceDialog.querySelector(".cta-button");
+         amountDialog.close();
+-    });
+-    presetButtonsContainer.addEventListener("click", function(event) {
+-        if (event.target.matches("button")) {
+-            setAmountValue(event.target.getAttribute("data-value"));
+-            amountInput.focus();
+-        }
+-    });
+-    const zapEndpoint = metadataPromise.then((0, $13e8be8e63ffb062$export$3d19459af3df635a));
+-    form.addEventListener("submit", async function(event) {
+-        event.preventDefault();
+-        setZapButtonToLoadingState();
+-        const amount = Number(amountInput.value) * 1000;
+-        const comment = commentInput.value;
++        invoiceDialog.showModal();
++        openWalletButton.focus();
++      };
++      if (window.webln) {
+         try {
+-            const invoice = await (0, $13e8be8e63ffb062$export$16630ab37b92a682)({
+-                zapEndpoint: await zapEndpoint,
+-                amount: amount,
+-                comment: comment,
+-                authorId: authorId,
+-                nip19Target: nip19Target,
+-                normalizedRelays: normalizedRelays,
+-                anon: anon
+-            });
+-            const showInvoiceDialog = async ()=>{
+-                const invoiceDialog = $ba417727cf57ac1f$var$renderInvoiceDialog({
+-                    dialogHeader: await getDialogHeader(),
+-                    invoice: invoice,
+-                    relays: normalizedRelays,
+-                    buttonColor: buttonColor
+-                });
+-                const openWalletButton = invoiceDialog.querySelector(".cta-button");
+-                amountDialog.close();
+-                invoiceDialog.showModal();
+-                openWalletButton.focus();
+-            };
+-            if (window.webln) try {
+-                await window.webln.enable();
+-                await window.webln.sendPayment(invoice);
+-                amountDialog.close();
+-            } catch (e) {
+-                showInvoiceDialog();
+-            }
+-            else showInvoiceDialog();
++          await window.webln.enable();
++          const response = await window.webln.sendPayment(invoice);
++          if (!amountDialog.open) return;
++          if (isPaymentConfirmed(invoice, response)) {
++            form.reset();
++            amountDialog.close();
++            showSuccessDialog(zapEvent);
++          } else {
++            await showInvoiceDialog("Your wallet did not return payment confirmation. Check your wallet before sending again.");
++          }
+         } catch (error) {
+-            handleError(error);
++          if (!amountDialog.open) return;
++          await showInvoiceDialog("Your browser wallet did not confirm payment. Check your wallet, or use the QR code to pay.");
+         }
+-    });
+-    return amountDialog;
++      } else {
++        await showInvoiceDialog();
++      }
++    } catch (error) {
++      handleError(error);
++    }
++  });
++  return amountDialog;
+ };
+-const $ba417727cf57ac1f$var$renderErrorDialog = (message, npub)=>{
+-    const errorDialog = $ba417727cf57ac1f$var$renderDialog(`
+-    <button class="close-button">X</button>
 -    <p class="error-message">${message}</p>
 -    <a href="https://nosta.me/${npub}" target="_blank">
-+    <p class="error-message"></p>
-+    <a target="_blank">
-       <button class="cta-button">View Nostr Profile</button>
-     </a>
+-      <button class="cta-button">View Nostr Profile</button>
+-    </a>
++const showSuccessDialog = (zapEvent) => {
++  const dialog = renderDialog(`
++    <button class="close-button" aria-label="Close">\xD7</button>
++    <span class="result-icon" aria-hidden="true">\u2713</span>
++    <h2 id="zap-result-title">Zapped!</h2>
++    <p class="result-summary" role="status"></p>
++    <p class="result-message">Thanks for your support.</p>
++    <button class="cta-button">Done</button>
    `);
-+    errorDialog.querySelector(".error-message").textContent = String(message);
-+    errorDialog.querySelector("a").href = `https://nosta.me/${npub}`;
-     errorDialog.addEventListener("close", function() {
-         errorDialog.remove();
-     });
+-    errorDialog.addEventListener("close", function() {
+-        errorDialog.remove();
+-    });
+-    errorDialog.querySelector(".close-button").addEventListener("click", function() {
+-        errorDialog.close();
+-    });
+-    return errorDialog;
++  dialog.classList.add("result-dialog", "success-dialog");
++  dialog.setAttribute("aria-labelledby", "zap-result-title");
++  const amount = Number(zapEvent.tags.find((tag) => tag[0] === "amount")[1]) / 1e3;
++  dialog.querySelector(".result-summary").textContent = amount.toLocaleString("en-US") + " sats sent.";
++  dialog.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => dialog.close()));
++  dialog.addEventListener("close", () => dialog.remove());
++  dialog.showModal();
++  dialog.querySelector(".cta-button").focus();
+ };
+-const $ba417727cf57ac1f$export$2cd8252107eb640b = async ({ npub: npub, noteId: noteId, naddr: naddr, relays: relays, cachedAmountDialog: cachedAmountDialog, buttonColor: buttonColor, anon: anon })=>{
+-    let amountDialog = cachedAmountDialog;
+-    try {
+-        if (!amountDialog) amountDialog = await $ba417727cf57ac1f$var$renderAmountDialog({
+-            npub: npub,
+-            nip19Target: naddr ? naddr : noteId,
+-            relays: relays,
+-            buttonColor: buttonColor,
+-            anon: anon
+-        });
+-        amountDialog.showModal();
+-        if (!window.matchMedia("(max-height: 932px)").matches) amountDialog.querySelector('input[name="amount"]').focus();
+-        return amountDialog;
+-    } catch (error) {
+-        if (amountDialog) amountDialog.close();
+-        const errorDialog = $ba417727cf57ac1f$var$renderErrorDialog(error, npub);
+-        errorDialog.showModal();
++const renderErrorDialog = (message, npub, onRetry) => {
++  const errorDialog = renderDialog(`
++    <button class="close-button" aria-label="Close">\xD7</button>
++    <h2 id="zap-error-title">Zap couldn't be completed</h2>
++    <p class="error-message" role="alert"></p>
++    <button class="cta-button"></button>
++    <a class="profile-link" target="_blank" rel="noopener noreferrer">View Nostr Profile</a>
++  `);
++  errorDialog.classList.add("result-dialog");
++  errorDialog.setAttribute("aria-labelledby", "zap-error-title");
++  errorDialog.querySelector(".error-message").textContent = message instanceof Error ? message.message : String(message);
++  errorDialog.querySelector("a").href = `https://nosta.me/${npub}`;
++  const button = errorDialog.querySelector(".cta-button");
++  button.textContent = onRetry ? "Try again" : "Close";
++  button.addEventListener("click", () => {
++    errorDialog.close();
++    if (onRetry) void onRetry();
++  });
++  errorDialog.addEventListener("close", () => errorDialog.remove());
++  errorDialog.querySelector(".close-button").addEventListener("click", () => errorDialog.close());
++  return errorDialog;
++};
++const $ba417727cf57ac1f$export$2cd8252107eb640b = async ({
++  npub,
++  noteId,
++  naddr,
++  relays,
++  cachedAmountDialog,
++  buttonColor,
++  anon
++}) => {
++  let amountDialog = cachedAmountDialog;
++  try {
++    if (!amountDialog || !amountDialog.isConnected) {
++      amountDialog = await renderAmountDialog({
++        npub,
++        nip19Target: naddr ? naddr : noteId,
++        relays,
++        buttonColor,
++        anon
++      });
++    }
++    amountDialog.showModal();
++    if (!window.matchMedia("(max-height: 932px)").matches) {
++      amountDialog.querySelector('input[name="amount"]').focus();
++    }
++    return amountDialog;
++  } catch (error) {
++    if (amountDialog) {
++      amountDialog.close();
+     }
++    const errorDialog = renderErrorDialog(error, npub, () => $ba417727cf57ac1f$export$2cd8252107eb640b({ npub, noteId, naddr, relays, buttonColor, anon }));
++    errorDialog.showModal();
++  }
+ };
+-const $ba417727cf57ac1f$export$5ad548900f15d3e4 = (targetEl)=>{
+-    let cachedAmountDialog = null;
+-    let cachedParams = null;
+-    targetEl.addEventListener("click", async function() {
+-        const npub = targetEl.getAttribute("data-npub");
+-        const noteId = targetEl.getAttribute("data-note-id");
+-        const naddr = targetEl.getAttribute("data-naddr");
+-        const relays = targetEl.getAttribute("data-relays");
+-        const buttonColor = targetEl.getAttribute("data-button-color");
+-        const anon = targetEl.getAttribute("data-anon") === "true";
+-        if (cachedParams) {
+-            if (cachedParams.npub !== npub || cachedParams.noteId !== noteId || cachedParams.naddr !== naddr || cachedParams.relays !== relays || cachedParams.buttonColor !== buttonColor || cachedParams.anon !== anon) cachedAmountDialog = null;
++const $ba417727cf57ac1f$export$5ad548900f15d3e4 = (targetEl) => {
++  let cachedAmountDialog = null;
++  let cachedParams = null;
++  let initializing = false;
++  targetEl.addEventListener("click", async function() {
++    if (initializing) return;
++    initializing = true;
++    try {
++      const npub = targetEl.getAttribute("data-npub");
++      const noteId = targetEl.getAttribute("data-note-id");
++      const naddr = targetEl.getAttribute("data-naddr");
++      const relays = targetEl.getAttribute("data-relays");
++      const buttonColor = targetEl.getAttribute("data-button-color");
++      const anon = targetEl.getAttribute("data-anon") === "true";
++      if (cachedParams) {
++        if (cachedParams.npub !== npub || cachedParams.noteId !== noteId || cachedParams.naddr !== naddr || cachedParams.relays !== relays || cachedParams.buttonColor !== buttonColor || cachedParams.anon !== anon) {
++          cachedAmountDialog?.remove();
++          cachedAmountDialog = null;
+         }
+-        cachedParams = {
+-            npub: npub,
+-            noteId: noteId,
+-            naddr: naddr,
+-            relays: relays,
+-            buttonColor: buttonColor,
+-            anon: anon
+-        };
+-        cachedAmountDialog = await $ba417727cf57ac1f$export$2cd8252107eb640b({
+-            npub: npub,
+-            noteId: noteId,
+-            naddr: naddr,
+-            relays: relays,
+-            cachedAmountDialog: cachedAmountDialog,
+-            buttonColor: buttonColor,
+-            anon: anon
+-        });
+-    });
++      }
++      cachedParams = { npub, noteId, naddr, relays, buttonColor, anon };
++      cachedAmountDialog = await $ba417727cf57ac1f$export$2cd8252107eb640b({
++        npub,
++        noteId,
++        naddr,
++        relays,
++        cachedAmountDialog,
++        buttonColor,
++        anon
++      });
++    } finally {
++      initializing = false;
++    }
++  });
+ };
+-const $ba417727cf57ac1f$export$ddb6d5b8ac50fa3b = (selector)=>{
+-    document.querySelectorAll(selector || "[data-npub]").forEach($ba417727cf57ac1f$export$5ad548900f15d3e4);
++const $ba417727cf57ac1f$export$ddb6d5b8ac50fa3b = (selector) => {
++  document.querySelectorAll(selector || "[data-npub]").forEach($ba417727cf57ac1f$export$5ad548900f15d3e4);
+ };
+-const $ba417727cf57ac1f$export$1ab5838465dbd10a = ()=>{
+-    const styleElement = document.createElement("style");
+-    styleElement.innerHTML = `
++const $ba417727cf57ac1f$export$1ab5838465dbd10a = () => {
++  const styleElement = document.createElement("style");
++  styleElement.innerHTML = feedbackTokens + `
+       .nostr-zap-dialog {
+         width: 424px;
+         min-width: 376px;
+@@ -10161,23 +10292,107 @@ const $ba417727cf57ac1f$export$1ab5838465dbd10a = ()=>{
+           max-width: 78px;
+         }
+       }
+-  `;
+-    const host = document.createElement("div");
+-    document.body.appendChild(host);
+-    $ba417727cf57ac1f$var$shadow = host.attachShadow({
+-        mode: "open"
+-    });
+-    $ba417727cf57ac1f$var$shadow.appendChild(styleElement);
+-};
+-
+ 
+-(0, $ba417727cf57ac1f$export$1ab5838465dbd10a)();
+-(0, $ba417727cf57ac1f$export$ddb6d5b8ac50fa3b)();
+-window.nostrZap = {
+-    init: $ba417727cf57ac1f$export$2cd8252107eb640b,
+-    initTarget: $ba417727cf57ac1f$export$5ad548900f15d3e4,
+-    initTargets: $ba417727cf57ac1f$export$ddb6d5b8ac50fa3b
++      .nostr-zap-dialog {
++        box-sizing: border-box;
++        width: min(496px, calc(100vw - var(--zap-space-8)));
++        min-width: 0;
++        max-height: calc(100dvh - var(--zap-space-8));
++        overflow-y: auto;
++        box-shadow: var(--zap-shadow);
++        font-family: var(--zap-font);
++        color: var(--zap-text);
++      }
++      .nostr-zap-dialog::backdrop { background: rgb(0 0 0 / 40%); }
++      .nostr-zap-dialog .payment-status,
++      .nostr-zap-dialog .qr-hint {
++        font-size: var(--zap-body);
++        line-height: 1.5;
++        color: var(--zap-muted);
++        margin: var(--zap-space-3) 0 0;
++      }
++      .nostr-zap-dialog .payment-status[data-state="error"] { color: var(--zap-error); }
++      .nostr-zap-dialog .result-icon {
++        display: block;
++        color: var(--zap-success);
++        font-size: var(--zap-title);
++        margin-bottom: var(--zap-space-3);
++      }
++      .nostr-zap-dialog.result-dialog {
++        width: min(400px, calc(100vw - var(--zap-space-8)));
++        max-width: calc(100vw - var(--zap-space-8));
++        padding: var(--zap-space-8);
++        border-radius: var(--zap-radius);
++        background: var(--zap-surface);
++      }
++      .nostr-zap-dialog.result-dialog h2 {
++        color: var(--zap-text);
++        font-size: var(--zap-title);
++        line-height: 1.25;
++        margin: var(--zap-space-3) 0 var(--zap-space-4);
++      }
++      .nostr-zap-dialog.result-dialog p {
++        font-size: var(--zap-body);
++        line-height: 1.5;
++        margin: var(--zap-space-2) 0;
++      }
++      .nostr-zap-dialog.result-dialog .result-summary { color: var(--zap-success); }
++      .nostr-zap-dialog.result-dialog .result-summary { font-weight: 600; }
++      .nostr-zap-dialog.result-dialog:not(.success-dialog) h2 {
++        font-size: var(--zap-error-title);
++        text-wrap: balance;
++        margin-top: var(--zap-space-8);
++      }
++      .nostr-zap-dialog.result-dialog .result-message { color: var(--zap-muted); }
++      .nostr-zap-dialog.result-dialog .error-message {
++        color: var(--zap-error);
++        text-align: center;
++        overflow-wrap: anywhere;
++      }
++      .nostr-zap-dialog.result-dialog .cta-button {
++        background: var(--zap-accent);
++        margin-top: var(--zap-space-6);
++      }
++      .nostr-zap-dialog.result-dialog .cta-button:hover { background: var(--zap-accent-hover); }
++      .nostr-zap-dialog .profile-link {
++        display: inline-block;
++        color: var(--zap-muted);
++        font-size: var(--zap-body);
++        padding: var(--zap-space-2) 0;
++        margin-top: var(--zap-space-1);
++        min-height: var(--zap-control);
++        box-sizing: border-box;
++      }
++      .nostr-zap-dialog :focus-visible {
++        outline: 2px solid var(--zap-accent);
++        outline-offset: var(--zap-space-1);
++      }
++      .nostr-zap-dialog .close-button {
++        font-size: var(--zap-title);
++        padding: 0;
++        width: var(--zap-control);
++        height: var(--zap-control);
++      }
++      .nostr-zap-dialog.result-dialog .cta-button { min-height: var(--zap-control); }
++      .nostr-zap-dialog .result-icon { font-size: var(--zap-icon); }
++      .nostr-zap-dialog .qrcode { cursor: pointer; }
++      .nostr-zap-dialog canvas,
++      .nostr-zap-dialog .qrcode img { max-width: 100%; height: auto; }
++      @media (max-width: 413px) {
++        .nostr-zap-dialog.result-dialog { padding: var(--zap-space-6); }
++        .nostr-zap-dialog .preset-zap-options-container button { width: 23%; }
++      }
++      @media (prefers-reduced-motion: reduce) {
++        .nostr-zap-dialog .spinner:after,
++        .nostr-zap-dialog .skeleton-placeholder { animation: none; }
++      }
++  `;
++  const host = document.createElement("div");
++  document.body.appendChild(host);
++  shadow = host.attachShadow({ mode: "open" });
++  shadow.appendChild(styleElement);
+ };
+ 
+-
+-//# sourceMappingURL=main.js.map
++$ba417727cf57ac1f$export$1ab5838465dbd10a();
++$ba417727cf57ac1f$export$ddb6d5b8ac50fa3b(document.getElementById("zap-proxy") ? "#zap-proxy" : void 0);
++window.nostrZap = { init: $ba417727cf57ac1f$export$2cd8252107eb640b, initTarget: $ba417727cf57ac1f$export$5ad548900f15d3e4, initTargets: $ba417727cf57ac1f$export$ddb6d5b8ac50fa3b };
+diff --git a/src/index.js b/src/index.js
+index abe48b0f248fefec6a0849a572c51a2e3db8d39a..38a8ae47569c1a849714ae7cf22a04fcf3561fb2 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -1,6 +1,6 @@
+ import { injectCSS, init, initTargets, initTarget } from "./view";
+ 
+ injectCSS();
+-initTargets();
++initTargets(document.getElementById("zap-proxy") ? "#zap-proxy" : undefined);
+ 
+ window.nostrZap = {init, initTarget, initTargets};
+diff --git a/src/nostr.js b/src/nostr.js
+index b6f65f788f6658ef4b2a96036b7bd0ae290caf46..e53aebb86f0729f7406b16e2051009fe3cc87a78 100644
+--- a/src/nostr.js
++++ b/src/nostr.js
+@@ -1,170 +1,149 @@
+-import {
+-  nip19,
+-  nip57,
+-  generatePrivateKey,
+-  finishEvent,
+-  SimplePool,
+-} from "nostr-tools";
++import { nip19, nip57, generatePrivateKey, finishEvent, SimplePool } from "nostr-tools";
++import { bech32 } from "@scure/base";
++import { sha256 } from "@noble/hashes/sha256";
+ 
+ export const decodeNpub = (npub) => nip19.decode(npub).data;
+-
+-const decodeNip19Entity = (nip19Entity) => nip19.decode(nip19Entity).data;
+-
+-let cachedProfileMetadata = {};
++const decodeNip19Entity = (entity) => nip19.decode(entity).data;
+ 
+ export const getProfileMetadata = async (authorId) => {
+-  if (cachedProfileMetadata[authorId]) {
+-    return cachedProfileMetadata[authorId];
+-  }
+-
+   const pool = new SimplePool();
+-  const relays = [
+-    "wss://relay.nostr.band",
+-    "wss://purplepag.es",
+-    "wss://relay.damus.io",
+-    "wss://nostr.wine",
+-  ];
+-
++  const relays = ["wss://relay.nostr.band", "wss://purplepag.es", "wss://relay.damus.io", "wss://nostr.wine"];
+   try {
+-    return await pool.get(relays, {
+-      authors: [authorId],
+-      kinds: [0],
+-    });
+-  } catch (error) {
+-    throw new Error("failed to fetch user profile :(");
++    const metadata = await pool.get(relays, { authors: [authorId], kinds: [0] });
++    if (!metadata) throw new Error();
++    return metadata;
++  } catch {
++    throw new Error("Unable to load the recipient's profile. Please try again.");
+   } finally {
+     pool.close(relays);
+   }
+ };
+ 
+-export const extractProfileMetadataContent = (profileMetadata) =>
+-  JSON.parse(profileMetadata.content);
+-
+-export const getZapEndpoint = async (profileMetadata) => {
+-  const zapEndpoint = await nip57.getZapEndpoint(profileMetadata);
++export const extractProfileMetadataContent = (metadata) => JSON.parse(metadata.content);
+ 
+-  if (!zapEndpoint) {
+-    throw new Error("failed to retrieve zap endpoint :(");
++const fetchJson = async (url) => {
++  const controller = new AbortController();
++  const timeout = setTimeout(() => controller.abort(), 20000);
++  try {
++    const response = await fetch(url, { signal: controller.signal });
++    if (!response.ok) throw new Error("The payment service is unavailable. Please try again.");
++    return await response.json();
++  } finally {
++    clearTimeout(timeout);
+   }
++};
+ 
+-  return zapEndpoint;
++export const getZapEndpoint = async (metadata) => {
++  const { lud06, lud16 } = extractProfileMetadataContent(metadata);
++  let lnurl;
++  if (lud06) {
++    lnurl = new TextDecoder().decode(bech32.fromWords(bech32.decode(lud06, 1000).words));
++  } else if (lud16) {
++    const [name, domain] = lud16.split("@");
++    lnurl = `https://${domain}/.well-known/lnurlp/${name}`;
++  } else {
++    throw new Error("This recipient does not have a Lightning address.");
++  }
++  const endpoint = await fetchJson(lnurl);
++  if (!endpoint.allowsNostr || !/^[a-f0-9]{64}$/i.test(endpoint.nostrPubkey) || !endpoint.callback) {
++    throw new Error("The recipient's payment service does not support Zaps.");
++  }
++  return endpoint;
+ };
+ 
+-const signEvent = async (zapEvent, anon) => {
++const signEvent = async (event, anon) => {
+   if (isNipO7ExtAvailable() && !anon) {
+-    try {
+-      return await window.nostr.signEvent(zapEvent);
+-    } catch (e) {
+-      // fail silently and sign event as an anonymous user
+-    }
++    try { return await window.nostr.signEvent(event); } catch {}
+   }
+-
+-  return finishEvent(zapEvent, generatePrivateKey());
++  return finishEvent(event, generatePrivateKey());
+ };
+ 
+-const makeZapEvent = async ({
+-  profile,
+-  nip19Target,
+-  amount,
+-  relays,
+-  comment,
+-  anon,
+-}) => {
++const makeZapEvent = async ({ profile, nip19Target, amount, relays, comment, anon }) => {
++  const target = nip19Target ? nip19.decode(nip19Target) : undefined;
+   const zapEvent = nip57.makeZapRequest({
+     profile,
+-    event: nip19Target && nip19Target.startsWith("note") ? decodeNip19Entity(nip19Target) : undefined,
+-    amount,
+-    relays,
+-    comment,
++    event: target?.type === "note" ? target.data : target?.type === "nevent" ? target.data.id : undefined,
++    amount, relays, comment,
+   });
+-
+-  const naddrData = nip19Target && nip19Target.startsWith("naddr") ? decodeNip19Entity(nip19Target) : undefined;
+-  if (naddrData) {
+-    const relays = naddrData.relays ? naddrData.relays.reduce((acc, r) => `${r},${acc}`, "") : "";
+-    zapEvent.tags.push(["a", `${naddrData.kind}:${naddrData.pubkey}:${naddrData.identifier}`, relays]);
+-  }
+-
+-  // add anon tag so apps like damus display zap as anonymous
+-  if (!isNipO7ExtAvailable() || anon) {
+-    zapEvent.tags.push(["anon"]);
+-  }
+-
++  const naddr = target?.type === "naddr" ? target.data : undefined;
++  if (naddr) zapEvent.tags.push(["a", `${naddr.kind}:${naddr.pubkey}:${naddr.identifier}`, (naddr.relays || []).join(",")]);
++  if (!isNipO7ExtAvailable() || anon) zapEvent.tags.push(["anon"]);
+   return signEvent(zapEvent, anon);
+ };
+ 
+-export const fetchInvoice = async ({
+-  zapEndpoint,
+-  amount,
+-  comment,
+-  authorId,
+-  nip19Target,
+-  normalizedRelays,
+-  anon,
+-}) => {
+-  const zapEvent = await makeZapEvent({
+-    profile: authorId,
+-    nip19Target,
+-    amount,
+-    relays: normalizedRelays,
+-    comment,
+-    anon,
+-  });
+-  let url = `${zapEndpoint}?amount=${amount}&nostr=${encodeURIComponent(
+-    JSON.stringify(zapEvent)
+-  )}`;
+-
+-  if (comment) {
+-    url = `${url}&comment=${encodeURIComponent(comment)}`;
++const toHex = (bytes) => Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
++
++// Read the amount and payment/description hashes from a checksummed BOLT11 invoice.
++const decodeInvoice = (invoice) => {
++  const { prefix, words } = bech32.decode(invoice.toLowerCase(), 5000);
++  const match = /^ln(?:bc|tb|bcrt)(\d+)([munp]?)$/.exec(prefix);
++  if (!match || words.length < 111) throw new Error("Invalid payment invoice.");
++  const value = BigInt(match[1]);
++  const multipliers = { "": 100000000000n, m: 100000000n, u: 100000n, n: 100n };
++  const amount = match[2] === "p" ? (value % 10n === 0n ? value / 10n : -1n) : value * multipliers[match[2]];
++  const hashes = {};
++  const end = words.length - 104;
++  for (let index = 7; index < end;) {
++    const type = words[index++];
++    const length = words[index++] * 32 + words[index++];
++    if (!Number.isInteger(length) || index + length > end) throw new Error("Invalid payment invoice.");
++    if (type === 1 || type === 23) hashes[type] = toHex(bech32.fromWords(words.slice(index, index + length)));
++    index += length;
+   }
++  if (amount <= 0n || !/^[a-f0-9]{64}$/.test(hashes[1])) throw new Error("Invalid payment invoice.");
++  return { amount, paymentHash: hashes[1], descriptionHash: hashes[23] };
++};
+ 
+-  const res = await fetch(url);
+-  const { pr: invoice, reason, status } = await res.json();
++export const isPaymentConfirmed = (invoice, response) => {
++  try {
++    if (!/^[a-f0-9]{64}$/i.test(response?.preimage)) return false;
++    const bytes = Uint8Array.from(response.preimage.match(/../g), (byte) => parseInt(byte, 16));
++    return toHex(sha256(bytes)) === decodeInvoice(invoice).paymentHash;
++  } catch { return false; }
++};
+ 
+-  if (invoice) {
+-    return invoice;
+-  } else if (status === "ERROR") {
+-    throw new Error(reason ?? "Unable to fetch invoice");
+-  } else {
+-    throw new Error("Unable to fetch invoice");
++export const fetchInvoice = async ({ zapEndpoint, amount, comment, authorId, nip19Target, normalizedRelays, anon }) => {
++  const zapEvent = await makeZapEvent({ profile: authorId, nip19Target, amount, relays: normalizedRelays, comment, anon });
++  const description = JSON.stringify(zapEvent);
++  const url = new URL(zapEndpoint.callback);
++  url.searchParams.set("amount", String(amount));
++  url.searchParams.set("nostr", description);
++  if (comment) url.searchParams.set("comment", comment);
++  const { pr: invoice, reason, status } = await fetchJson(url);
++  if (!invoice || status === "ERROR") throw new Error(reason ?? "Unable to get a payment invoice. Please try again.");
++  const details = decodeInvoice(invoice);
++  if (details.amount !== BigInt(amount) || details.descriptionHash !== toHex(sha256(new TextEncoder().encode(description)))) {
++    throw new Error("The payment invoice does not match this Zap. Please try again.");
+   }
++  return { invoice, zapEvent, providerPubkey: zapEndpoint.nostrPubkey.toLowerCase() };
+ };
+ 
+-export const isNipO7ExtAvailable = () => {
+-  return window !== undefined && window.nostr !== undefined;
+-};
++export const isNipO7ExtAvailable = () => typeof window !== "undefined" && window.nostr !== undefined;
+ 
+-export const listenForZapReceipt = ({ relays, invoice, onSuccess }) => {
++export const listenForZapReceipt = ({ relays, invoice, zapEvent, providerPubkey, onSuccess }) => {
+   const pool = new SimplePool();
+-  const normalizedRelays = Array.from(
+-    new Set([...relays, "wss://relay.nostr.band"])
+-  );
+-  const closePool = () => {
+-    if (pool) {
+-      pool.close(normalizedRelays);
+-    }
++  const normalizedRelays = Array.from(new Set([...relays, "wss://relay.nostr.band"]));
++  const recipient = zapEvent.tags.find((tag) => tag[0] === "p")[1];
++  let closed = false;
++  const sub = pool.sub(normalizedRelays, [{ kinds: [9735], authors: [providerPubkey], "#p": [recipient], since: zapEvent.created_at - 60 }]);
++  const close = () => {
++    if (closed) return;
++    closed = true;
++    sub.unsub();
++    pool.close(normalizedRelays);
+   };
+-  const since = Math.round(Date.now() / 1000);
+-
+-  // check for zap receipt every 5 seconds
+-  const intervalId = setInterval(() => {
+-    const sub = pool.sub(normalizedRelays, [
+-      {
+-        kinds: [9735],
+-        since,
+-      },
+-    ]);
+-
+-    sub.on("event", (event) => {
+-      if (event.tags.find((t) => t[0] === "bolt11" && t[1] === invoice)) {
+-        onSuccess();
+-        closePool();
+-        clearInterval(intervalId);
++  sub.on("event", (event) => {
++    if (closed || event.pubkey !== providerPubkey || !event.tags.some((tag) => tag[0] === "bolt11" && tag[1] === invoice)) return;
++    try {
++      const description = event.tags.find((tag) => tag[0] === "description")?.[1];
++      const request = JSON.parse(description);
++      if (request.id !== zapEvent.id || decodeInvoice(invoice).descriptionHash !== toHex(sha256(new TextEncoder().encode(description)))) return;
++      for (const target of zapEvent.tags.filter((tag) => ["p", "e", "a"].includes(tag[0]))) {
++        if (!event.tags.some((tag) => tag[0] === target[0] && tag[1] === target[1])) return;
+       }
+-    });
+-  }, 5000);
+-
+-  return () => {
+-    closePool();
+-    clearInterval(intervalId);
+-  };
++      close();
++      onSuccess();
++    } catch { /* Ignore malformed or unrelated receipts; keep waiting. */ }
++  });
++  return close;
+ };
+diff --git a/src/tokens.js b/src/tokens.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..ee016af621c73a29a55a64868abe68b817130634
+--- /dev/null
++++ b/src/tokens.js
+@@ -0,0 +1,26 @@
++export const feedbackTokens = `
++  :host {
++    --zap-surface: #fff;
++    --zap-text: #171923;
++    --zap-muted: #4a5568;
++    --zap-accent: #7f00ff;
++    --zap-accent-hover: #4b0082;
++    --zap-success: #166534;
++    --zap-error: #b91c1c;
++    --zap-border: #cbd5e0;
++    --zap-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
++    --zap-body: 1rem;
++    --zap-title: 1.75rem;
++    --zap-error-title: 1.5rem;
++    --zap-icon: 2rem;
++    --zap-control: 44px;
++    --zap-space-1: 4px;
++    --zap-space-2: 8px;
++    --zap-space-3: 12px;
++    --zap-space-4: 16px;
++    --zap-space-6: 24px;
++    --zap-space-8: 32px;
++    --zap-radius: 10px;
++    --zap-shadow: 0 10px 32px rgb(0 0 0 / 12%);
++  }
++`;
 diff --git a/src/view.js b/src/view.js
-index 5c1891bf2233832c51f7405a2779356e95b98b2e..262e524cbc47f602732e21e8abe255bb79bb3157 100644
+index 5c1891bf2233832c51f7405a2779356e95b98b2e..05f80543342f8ce687f657e346d9af6fa5d744b3 100644
 --- a/src/view.js
 +++ b/src/view.js
-@@ -340,12 +340,14 @@ const renderAmountDialog = async ({
- const renderErrorDialog = (message, npub) => {
-   const errorDialog = renderDialog(`
-     <button class="close-button">X</button>
+@@ -6,9 +6,12 @@ import {
+   getProfileMetadata,
+   getZapEndpoint,
+   listenForZapReceipt,
++  isPaymentConfirmed,
+ } from "./nostr";
+ import { getCachedLightningUri, cacheLightningUri } from "./cache";
+ 
++import { feedbackTokens } from "./tokens";
++
+ let shadow = null;
+ 
+ const hexToRgb = (hex) => {
+@@ -70,10 +73,14 @@ const renderDialog = (htmlStrTemplate) => {
+ const renderInvoiceDialog = ({
+   dialogHeader,
+   invoice,
++  zapEvent,
++  providerPubkey,
++  notice,
+   relays,
+   buttonColor,
+ }) => {
+-  const cachedLightningUri = getCachedLightningUri();
++  let cachedLightningUri;
++  try { cachedLightningUri = getCachedLightningUri(); } catch {}
+   const options = [
+     { label: "Default Wallet", value: "lightning:" },
+     { label: "Strike", value: "strike:lightning:" },
+@@ -90,13 +97,14 @@ const renderInvoiceDialog = ({
+     { label: "River", value: "river://" },
+   ];
+   const invoiceDialog = renderDialog(`
+-        <button class="close-button">X</button>
++        <button class="close-button" aria-label="Close">×</button>
+         ${dialogHeader}
+         <div class="qrcode">
+-          <div class="overlay">copied invoice to clipboard</div>
++          <div class="overlay">Invoice copied</div>
+         </div>
+-        <p>click QR code to copy invoice</p>
+-        <select name="lightning-wallet">
++        <p class="qr-hint">Tap the QR code to copy the invoice.</p>
++        <p class="payment-status" role="status" aria-live="polite"></p>
++        <select name="lightning-wallet" aria-label="Choose a wallet">
+           ${options
+             .map(
+               ({ label, value }) =>
+@@ -122,28 +130,56 @@ const renderInvoiceDialog = ({
+   );
+   const ctaButtonEl = invoiceDialog.querySelector(".cta-button");
+   const overlayEl = qrCodeEl.querySelector(".overlay");
++  const statusEl = invoiceDialog.querySelector(".payment-status");
++  statusEl.textContent = notice || "Waiting for payment confirmation…";
++  if (notice) statusEl.dataset.state = "error";
++  const confirmationTimer = setTimeout(() => {
++    statusEl.textContent = "Still waiting for confirmation. If you paid, check your wallet before sending again.";
++    delete statusEl.dataset.state;
++  }, 60000);
+   const closePool = listenForZapReceipt({
+     relays,
+     invoice,
++    zapEvent,
++    providerPubkey,
+     onSuccess: () => {
+       invoiceDialog.close();
++      showSuccessDialog(zapEvent);
+     },
+   });
+ 
+   new QRCode(qrCodeEl, { text: invoice, quietZone: 10 });
+ 
+-  qrCodeEl.addEventListener("click", function () {
+-    navigator.clipboard.writeText(invoice);
+-    overlayEl.classList.add("show");
+-    setTimeout(() => overlayEl.classList.remove("show"), 2000);
++  const copyInvoice = async () => {
++    try {
++      await navigator.clipboard.writeText(invoice);
++      overlayEl.classList.add("show");
++      setTimeout(() => overlayEl.classList.remove("show"), 2000);
++    } catch {
++      statusEl.textContent = "Could not copy the invoice. Scan the QR code or open your wallet.";
++      statusEl.dataset.state = "error";
++    }
++  };
++  qrCodeEl.setAttribute("role", "button");
++  qrCodeEl.setAttribute("tabindex", "0");
++  qrCodeEl.setAttribute("aria-label", "Copy payment invoice");
++  qrCodeEl.addEventListener("click", copyInvoice);
++  qrCodeEl.addEventListener("keydown", (event) => {
++    if (event.key === "Enter" || event.key === " ") {
++      event.preventDefault();
++      void copyInvoice();
++    }
+   });
+ 
+   ctaButtonEl.addEventListener("click", function () {
+-    cacheLightningUri(lightningWalletEl.value);
++    statusEl.textContent = "Complete payment in your wallet. Waiting for confirmation…";
++    delete statusEl.dataset.state;
++    try { cacheLightningUri(lightningWalletEl.value); } catch {}
+     window.location.href = `${lightningWalletEl.value}${invoice}`;
+   });
+ 
+   invoiceDialog.addEventListener("close", function () {
++    clearTimeout(confirmationTimer);
+     closePool();
+     invoiceDialog.remove();
+   });
+@@ -193,7 +229,7 @@ const renderAmountDialog = async ({
+     `;
+   };
+   const amountDialog = renderDialog(`
+-      <button class="close-button">X</button>
++      <button class="close-button" aria-label="Close">×</button>
+       <div class="dialog-header-container">
+         <h2 class="skeleton-placeholder"></h2>
+           <img
+@@ -215,8 +251,8 @@ const renderAmountDialog = async ({
+         <button data-value="1000000">1M ⚡️</button>
+       </div>
+       <form>
+-        <input name="amount" type="number" placeholder="amount in sats" required />
+-        <input name="comment" placeholder="optional comment" />
++        <input name="amount" type="number" min="1" step="1" aria-label="Amount in sats" placeholder="Amount in sats" required />
++        <input name="comment" aria-label="Optional comment" placeholder="Optional comment" />
+         <button class="cta-button" 
+           ${
+             buttonColor
+@@ -240,9 +276,18 @@ const renderAmountDialog = async ({
+     ".dialog-header-container"
+   );
+   const handleError = (error) => {
++    if (!amountDialog.open) return;
++    const savedAmount = amountInput.value;
++    const savedComment = commentInput.value;
+     amountDialog.close();
+-
+-    const errorDialog = renderErrorDialog(error, npub);
++    const errorDialog = renderErrorDialog(error, npub, async () => {
++      amountDialog.remove();
++      const dialog = await init({ npub, noteId: nip19Target, relays, buttonColor, anon });
++      if (dialog) {
++        dialog.querySelector('input[name="amount"]').value = savedAmount;
++        dialog.querySelector('input[name="comment"]').value = savedComment;
++      }
++    });
+ 
+     errorDialog.showModal();
+   };
+@@ -268,7 +313,7 @@ const renderAmountDialog = async ({
+ 
+   amountDialog.addEventListener("close", function () {
+     setZapButtonToDefaultState();
+-    form.reset();
++    // Keep the amount and comment available for a retry.
+   });
+ 
+   amountDialog
+@@ -284,8 +329,6 @@ const renderAmountDialog = async ({
+     }
+   });
+ 
+-  const zapEndpoint = metadataPromise.then(getZapEndpoint);
+-
+   form.addEventListener("submit", async function (event) {
+     event.preventDefault();
+     setZapButtonToLoadingState();
+@@ -294,8 +337,8 @@ const renderAmountDialog = async ({
+     const comment = commentInput.value;
+ 
+     try {
+-      const invoice = await fetchInvoice({
+-        zapEndpoint: await zapEndpoint,
++      const { invoice, zapEvent, providerPubkey } = await fetchInvoice({
++        zapEndpoint: await getZapEndpoint(await metadataPromise),
+         amount,
+         comment,
+         authorId,
+@@ -304,10 +347,14 @@ const renderAmountDialog = async ({
+         anon,
+       });
+ 
+-      const showInvoiceDialog = async () => {
++      if (!amountDialog.open) return;
++      const showInvoiceDialog = async (notice) => {
+         const invoiceDialog = renderInvoiceDialog({
+           dialogHeader: await getDialogHeader(),
+           invoice,
++          zapEvent,
++          providerPubkey,
++          notice,
+           relays: normalizedRelays,
+           buttonColor,
+         });
+@@ -321,13 +368,21 @@ const renderAmountDialog = async ({
+       if (window.webln) {
+         try {
+           await window.webln.enable();
+-          await window.webln.sendPayment(invoice);
+-          amountDialog.close();
+-        } catch (e) {
+-          showInvoiceDialog();
++          const response = await window.webln.sendPayment(invoice);
++          if (!amountDialog.open) return;
++          if (isPaymentConfirmed(invoice, response)) {
++            form.reset();
++            amountDialog.close();
++            showSuccessDialog(zapEvent);
++          } else {
++            await showInvoiceDialog("Your wallet did not return payment confirmation. Check your wallet before sending again.");
++          }
++        } catch (error) {
++          if (!amountDialog.open) return;
++          await showInvoiceDialog("Your browser wallet did not confirm payment. Check your wallet, or use the QR code to pay.");
+         }
+       } else {
+-        showInvoiceDialog();
++        await showInvoiceDialog();
+       }
+     } catch (error) {
+       handleError(error);
+@@ -337,25 +392,45 @@ const renderAmountDialog = async ({
+   return amountDialog;
+ };
+ 
+-const renderErrorDialog = (message, npub) => {
+-  const errorDialog = renderDialog(`
+-    <button class="close-button">X</button>
 -    <p class="error-message">${message}</p>
 -    <a href="https://nosta.me/${npub}" target="_blank">
-+    <p class="error-message"></p>
-+    <a target="_blank">
-       <button class="cta-button">View Nostr Profile</button>
-     </a>
+-      <button class="cta-button">View Nostr Profile</button>
+-    </a>
++const showSuccessDialog = (zapEvent) => {
++  const dialog = renderDialog(`
++    <button class="close-button" aria-label="Close">×</button>
++    <span class="result-icon" aria-hidden="true">✓</span>
++    <h2 id="zap-result-title">Zapped!</h2>
++    <p class="result-summary" role="status"></p>
++    <p class="result-message">Thanks for your support.</p>
++    <button class="cta-button">Done</button>
    `);
++  dialog.classList.add("result-dialog", "success-dialog");
++  dialog.setAttribute("aria-labelledby", "zap-result-title");
++  const amount = Number(zapEvent.tags.find((tag) => tag[0] === "amount")[1]) / 1000;
++  dialog.querySelector(".result-summary").textContent = amount.toLocaleString("en-US") + " sats sent.";
++  dialog.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => dialog.close()));
++  dialog.addEventListener("close", () => dialog.remove());
++  dialog.showModal();
++  dialog.querySelector(".cta-button").focus();
++};
  
-+  errorDialog.querySelector(".error-message").textContent = String(message);
+-  errorDialog.addEventListener("close", function () {
+-    errorDialog.remove();
++const renderErrorDialog = (message, npub, onRetry) => {
++  const errorDialog = renderDialog(`
++    <button class="close-button" aria-label="Close">×</button>
++    <h2 id="zap-error-title">Zap couldn't be completed</h2>
++    <p class="error-message" role="alert"></p>
++    <button class="cta-button"></button>
++    <a class="profile-link" target="_blank" rel="noopener noreferrer">View Nostr Profile</a>
++  `);
++  errorDialog.classList.add("result-dialog");
++  errorDialog.setAttribute("aria-labelledby", "zap-error-title");
++  errorDialog.querySelector(".error-message").textContent = message instanceof Error ? message.message : String(message);
 +  errorDialog.querySelector("a").href = `https://nosta.me/${npub}`;
-   errorDialog.addEventListener("close", function () {
-     errorDialog.remove();
++  const button = errorDialog.querySelector(".cta-button");
++  button.textContent = onRetry ? "Try again" : "Close";
++  button.addEventListener("click", () => {
++    errorDialog.close();
++    if (onRetry) void onRetry();
    });
+-
+-  errorDialog
+-    .querySelector(".close-button")
+-    .addEventListener("click", function () {
+-      errorDialog.close();
+-    });
+-
++  errorDialog.addEventListener("close", () => errorDialog.remove());
++  errorDialog.querySelector(".close-button").addEventListener("click", () => errorDialog.close());
+   return errorDialog;
+ };
+ 
+@@ -370,7 +445,7 @@ export const init = async ({
+ }) => {
+   let amountDialog = cachedAmountDialog;
+   try {
+-    if (!amountDialog) {
++    if (!amountDialog || !amountDialog.isConnected) {
+       amountDialog = await renderAmountDialog({
+         npub,
+         nip19Target: naddr ? naddr : noteId,
+@@ -390,7 +465,7 @@ export const init = async ({
+     if (amountDialog) {
+       amountDialog.close();
+     }
+-    const errorDialog = renderErrorDialog(error, npub);
++    const errorDialog = renderErrorDialog(error, npub, () => init({ npub, noteId, naddr, relays, buttonColor, anon }));
+     errorDialog.showModal();
+   }
+ };
+@@ -398,8 +473,12 @@ export const init = async ({
+ export const initTarget = (targetEl) => {
+   let cachedAmountDialog = null;
+   let cachedParams = null;
++  let initializing = false;
+ 
+   targetEl.addEventListener("click", async function () {
++    if (initializing) return;
++    initializing = true;
++    try {
+     const npub = targetEl.getAttribute("data-npub");
+     const noteId = targetEl.getAttribute("data-note-id");
+     const naddr = targetEl.getAttribute("data-naddr");
+@@ -416,6 +495,7 @@ export const initTarget = (targetEl) => {
+         cachedParams.buttonColor !== buttonColor ||
+         cachedParams.anon !== anon
+       ) {
++        cachedAmountDialog?.remove();
+         cachedAmountDialog = null;
+       }
+     }
+@@ -431,6 +511,7 @@ export const initTarget = (targetEl) => {
+       buttonColor,
+       anon,
+     });
++    } finally { initializing = false; }
+   });
+ };
+ 
+@@ -441,7 +522,7 @@ export const initTargets = (selector) => {
+ export const injectCSS = () => {
+   const styleElement = document.createElement("style");
+ 
+-  styleElement.innerHTML = `
++  styleElement.innerHTML = feedbackTokens + `
+       .nostr-zap-dialog {
+         width: 424px;
+         min-width: 376px;
+@@ -667,6 +748,100 @@ export const injectCSS = () => {
+           max-width: 78px;
+         }
+       }
++
++      .nostr-zap-dialog {
++        box-sizing: border-box;
++        width: min(496px, calc(100vw - var(--zap-space-8)));
++        min-width: 0;
++        max-height: calc(100dvh - var(--zap-space-8));
++        overflow-y: auto;
++        box-shadow: var(--zap-shadow);
++        font-family: var(--zap-font);
++        color: var(--zap-text);
++      }
++      .nostr-zap-dialog::backdrop { background: rgb(0 0 0 / 40%); }
++      .nostr-zap-dialog .payment-status,
++      .nostr-zap-dialog .qr-hint {
++        font-size: var(--zap-body);
++        line-height: 1.5;
++        color: var(--zap-muted);
++        margin: var(--zap-space-3) 0 0;
++      }
++      .nostr-zap-dialog .payment-status[data-state="error"] { color: var(--zap-error); }
++      .nostr-zap-dialog .result-icon {
++        display: block;
++        color: var(--zap-success);
++        font-size: var(--zap-title);
++        margin-bottom: var(--zap-space-3);
++      }
++      .nostr-zap-dialog.result-dialog {
++        width: min(400px, calc(100vw - var(--zap-space-8)));
++        max-width: calc(100vw - var(--zap-space-8));
++        padding: var(--zap-space-8);
++        border-radius: var(--zap-radius);
++        background: var(--zap-surface);
++      }
++      .nostr-zap-dialog.result-dialog h2 {
++        color: var(--zap-text);
++        font-size: var(--zap-title);
++        line-height: 1.25;
++        margin: var(--zap-space-3) 0 var(--zap-space-4);
++      }
++      .nostr-zap-dialog.result-dialog p {
++        font-size: var(--zap-body);
++        line-height: 1.5;
++        margin: var(--zap-space-2) 0;
++      }
++      .nostr-zap-dialog.result-dialog .result-summary { color: var(--zap-success); }
++      .nostr-zap-dialog.result-dialog .result-summary { font-weight: 600; }
++      .nostr-zap-dialog.result-dialog:not(.success-dialog) h2 {
++        font-size: var(--zap-error-title);
++        text-wrap: balance;
++        margin-top: var(--zap-space-8);
++      }
++      .nostr-zap-dialog.result-dialog .result-message { color: var(--zap-muted); }
++      .nostr-zap-dialog.result-dialog .error-message {
++        color: var(--zap-error);
++        text-align: center;
++        overflow-wrap: anywhere;
++      }
++      .nostr-zap-dialog.result-dialog .cta-button {
++        background: var(--zap-accent);
++        margin-top: var(--zap-space-6);
++      }
++      .nostr-zap-dialog.result-dialog .cta-button:hover { background: var(--zap-accent-hover); }
++      .nostr-zap-dialog .profile-link {
++        display: inline-block;
++        color: var(--zap-muted);
++        font-size: var(--zap-body);
++        padding: var(--zap-space-2) 0;
++        margin-top: var(--zap-space-1);
++        min-height: var(--zap-control);
++        box-sizing: border-box;
++      }
++      .nostr-zap-dialog :focus-visible {
++        outline: 2px solid var(--zap-accent);
++        outline-offset: var(--zap-space-1);
++      }
++      .nostr-zap-dialog .close-button {
++        font-size: var(--zap-title);
++        padding: 0;
++        width: var(--zap-control);
++        height: var(--zap-control);
++      }
++      .nostr-zap-dialog.result-dialog .cta-button { min-height: var(--zap-control); }
++      .nostr-zap-dialog .result-icon { font-size: var(--zap-icon); }
++      .nostr-zap-dialog .qrcode { cursor: pointer; }
++      .nostr-zap-dialog canvas,
++      .nostr-zap-dialog .qrcode img { max-width: 100%; height: auto; }
++      @media (max-width: 413px) {
++        .nostr-zap-dialog.result-dialog { padding: var(--zap-space-6); }
++        .nostr-zap-dialog .preset-zap-options-container button { width: 23%; }
++      }
++      @media (prefers-reduced-motion: reduce) {
++        .nostr-zap-dialog .spinner:after,
++        .nostr-zap-dialog .skeleton-placeholder { animation: none; }
++      }
+   `;
+ 
+   const host = document.createElement("div");
