@@ -10,7 +10,8 @@
     "analyze": "node scripts/check-zap-patch.mjs && cross-env ANALYZE=true next build --webpack",
     "lint": "eslint --fix --ext .js,.jsx,.ts,.tsx app components lib layouts scripts",
     "prepare": "husky",
-    "check:zap": "node scripts/check-zap-patch.mjs"
+    "check:zap": "node scripts/check-zap-patch.mjs",
+    "test:newsletter": "node --test scripts/newsletter.test.mjs"
   },
   "dependencies": {
     "@headlessui/react": "2.2.0",

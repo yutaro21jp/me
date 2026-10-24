@@ -42,6 +42,36 @@ Zap は、WebLN の支払い応答の preimage が請求書と一致した場合
 
 Blog（タグ別の一覧を含む）と Newsletter の一覧は1ページ10件です。1ページ目は Project・Book も10件に含め、2ページ目以降は通常記事を10件ずつ表示します。
 
+## ニュースレターの登録先
+
+このサイトを導入する運営者は、登録フォームの連携先を次の7サービスから選べます。`.env.local` または Vercel の `NEWSLETTER_PROVIDER` に識別名を設定し、選んだサービスの環境変数を入力します。空欄・未設定なら `data/siteMetadata.js` の `newsletter.provider` を使います（初期値は `resend`）。
+
+| サービス             | `NEWSLETTER_PROVIDER` | 必要な環境変数                                                       |
+| -------------------- | --------------------- | -------------------------------------------------------------------- |
+| Buttondown           | `buttondown`          | `BUTTONDOWN_API_KEY`                                                 |
+| Resend               | `resend`              | `RESEND_API_KEY`、`RESEND_SEGMENT_ID`                                |
+| Mailchimp            | `mailchimp`           | `MAILCHIMP_API_KEY`、`MAILCHIMP_API_SERVER`、`MAILCHIMP_AUDIENCE_ID` |
+| Kit（旧 ConvertKit） | `convertkit`          | `CONVERTKIT_API_KEY`（V3）、`CONVERTKIT_FORM_ID`                     |
+| Klaviyo              | `klaviyo`             | `KLAVIYO_API_KEY`、`KLAVIYO_LIST_ID`                                 |
+| EmailOctopus         | `emailoctopus`        | `EMAILOCTOPUS_API_KEY`、`EMAILOCTOPUS_LIST_ID`                       |
+| Beehiiv              | `beehiiv`             | `BEEHIIV_API_KEY`、`BEEHIIV_PUBLICATION_ID`                          |
+
+登録先はサイト単位で選びます。読者がフォームに入力したメールアドレスは、そのサービスへ登録されます。設定変更後は再起動・再デプロイしてください。`.env.example` は全サービスの変数名を空値でまとめています。旧テンプレートの `REVUE_API_KEY` は登録処理がないため削除しています。
+
+Mailchimp の `MAILCHIMP_API_SERVER` には `us1` などのデータセンター識別子を指定します。新規読者は `pending` で登録し、確認メールによる購読承認を待ちます。Kit は互換性のため V3 の API キーと Form ID を使用します。Klaviyo と EmailOctopus は各リストのオプトイン設定に従います。
+
+Resend を使う場合は、管理画面で読者用の Segment を用意し、`NEWSLETTER_PROVIDER` に `resend`、残りの2変数に API キーと Segment ID を設定して再起動・再デプロイします。`.env.example` の値は空欄にしてあります。
+
+Resend は [Contacts API](https://resend.com/docs/api-reference/contacts/create-contact) と [Segment 追加 API](https://resend.com/docs/api-reference/contacts/add-contact-to-segment) で登録し、配信停止を解除する更新は行いません。Resend の確認メール送信やダブルオプトインは、この登録 API には含まれていません。Resend での配信は管理画面の Broadcasts から行います。
+
+Newsletter 一覧とサイトマップは、引き続き Buttondown の公開 RSS を使用します。登録先の切り替えによる既存読者の移行や同期は行いません。
+
+登録 API のテストは外部通信をモックに置き換えて実行します。
+
+```bash
+npm run test:newsletter
+```
+
 ## 画像運用
 
 Vercel Hobby プランの Image Optimization 上限を避けるため、サイト内の画像は事前に WebP 化して `public/images/` から静的配信します。

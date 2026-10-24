@@ -1,4 +1,4 @@
-/** @type {import("pliny/config").PlinyConfig } */
+/** @type {Omit<import("pliny/config").PlinyConfig, 'newsletter'> & { newsletter?: { provider: import('../lib/newsletter').NewsletterProvider } }} */
 const siteMetadata = {
   title: 'yutaro',
   author: 'yutaro',
@@ -52,9 +52,9 @@ const siteMetadata = {
     // },
   },
   newsletter: {
-    // supports mailchimp, buttondown, convertkit, klaviyo, revue, emailoctopus, beehive
-    // Please add your .env file and modify it according to your selection
-    provider: 'buttondown',
+    // buttondown, resend, mailchimp, convertkit, klaviyo, emailoctopus, beehiiv
+    // NEWSLETTER_PROVIDER overrides this default.
+    provider: 'resend',
   },
   comments: {
     // If you want to use an analytics provider you have to add it to the

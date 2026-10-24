@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import siteMetadata from '@/data/siteMetadata'
+import { subscribeToNewsletter } from '@/lib/newsletter'
 
-const BUTTONDOWN_SUBSCRIBERS_URL = 'https://api.buttondown.email/v1/subscribers'
 const MAX_BODY_BYTES = 4 * 1024
 const MAX_EMAIL_LENGTH = 254
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -20,6 +20,11 @@ function json(body: Record<string, string>, status: number) {
       'Cache-Control': 'no-store',
     },
   })
+}
+
+function subscriptionError(response: Response) {
+  const status = response.status === 429 ? 429 : response.status < 500 ? 400 : 502
+  return json({ error: 'Unable to subscribe this address.' }, status)
 }
 
 function isTrustedOrigin(request: NextRequest) {
@@ -102,25 +107,21 @@ export async function POST(request: NextRequest) {
     return json({ error: 'A valid email address is required.' }, 400)
   }
 
-  const apiKey = process.env.BUTTONDOWN_API_KEY
-  if (!apiKey) {
-    return json({ error: 'Newsletter service is temporarily unavailable.' }, 503)
-  }
+  const provider = (
+    process.env.NEWSLETTER_PROVIDER?.trim() ||
+    siteMetadata.newsletter?.provider ||
+    'resend'
+  ).toLowerCase()
 
   try {
-    const response = await fetch(BUTTONDOWN_SUBSCRIBERS_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email_address: email }),
-      cache: 'no-store',
-    })
+    const response = await subscribeToNewsletter(email, provider)
+
+    if (!response) {
+      return json({ error: 'Newsletter service is temporarily unavailable.' }, 503)
+    }
 
     if (!response.ok) {
-      const status = response.status === 429 ? 429 : response.status < 500 ? 400 : 502
-      return json({ error: 'Unable to subscribe this address.' }, status)
+      return subscriptionError(response)
     }
 
     return json({ message: 'Successfully subscribed to the newsletter.' }, 201)
