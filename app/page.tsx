@@ -7,9 +7,12 @@ export default async function Page() {
   const featuredSlugs = [
     'blogstr',
     'bitcoin-resistance-1st',
+    'mempool-panic',
     'bitcoin-raabbit-hole-original-items',
     'anap-brand-channel',
     'bitcoin-tokyo-2024',
+    'fiat-night',
+    'geyser-grants-round-5',
   ]
   const featuredPosts = featuredSlugs
     .map((slug) => allBlogs.find((post) => post.slug === slug))
