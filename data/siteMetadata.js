@@ -23,7 +23,7 @@ const siteMetadata = {
   instagram: 'https://www.instagram.com',
   medium: 'https://medium.com',
   bluesky: 'https://bsky.app/profile/yutaro.bsky.social',
-  nostr: 'https://blogstr.net/p/yutaro@blogstr.net',
+  nostr: 'https://blogstr.net/ja/p/yutaro@blogstr.net',
   locale: 'ja-JP',
   // set to true if you want a navbar fixed to the top
   stickyNav: false,

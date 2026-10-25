@@ -11,7 +11,7 @@ const projectsData: Project[] = [
     title: 'Blogstr',
     description: `A Nostr-based blogging app for articles, short posts, tips, and paid content. Share your creative work without tying your content or connections to a single platform.`,
     imgSrc: '/images/blog/20260601/blogstr.webp',
-    href: 'https://blogstr.net/en/read/?naddr=naddr1qvzqqqr4gupzpvsmus40v2jqa02hnz2whx0hkecfsns4f5w062akcx30x7hd59gsqq8ryvpjxccnqvfsxqur2wpsxcnd88k0',
+    href: 'https://blogstr.net/read/?naddr=naddr1qvzqqqr4gupzpvsmus40v2jqa02hnz2whx0hkecfsns4f5w062akcx30x7hd59gsqq8ryvpjxccnqvfsxqur2wpsxcnd88k0',
     ctaLabel: 'View project',
   },
   {
